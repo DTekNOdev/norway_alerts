@@ -1,0 +1,41 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Set up Varsom Alerts",
+        "description": "Configure Varsom Alerts to receive landslide and flood warnings from NVE",
+        "data": {
+          "county_id": "County",
+          "warning_type": "Warning Type",
+          "lang": "Language",
+          "municipality_filter": "Municipality Filter (optional, comma-separated)"
+        }
+      }
+    },
+    "error": {
+      "cannot_connect": "Failed to connect to NVE/Varsom API. Please check your settings and try again.",
+      "unknown": "Unexpected error occurred"
+    },
+    "abort": {
+      "already_configured": "This county and warning type combination is already configured"
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Update Varsom Alerts configuration",
+        "description": "Update the configuration for this Varsom Alerts instance",
+        "data": {
+          "county_id": "County",
+          "warning_type": "Warning Type",
+          "lang": "Language",
+          "municipality_filter": "Municipality Filter (optional, comma-separated)"
+        }
+      }
+    },
+    "error": {
+      "cannot_connect": "Failed to connect to NVE/Varsom API. Please check your settings and try again.",
+      "unknown": "Unexpected error occurred"
+    }
+  }
+}
