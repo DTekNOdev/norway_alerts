@@ -17,6 +17,7 @@ CONF_COUNTY_NAME = "county_name"
 CONF_WARNING_TYPE = "warning_type"
 CONF_MUNICIPALITY_FILTER = "municipality_filter"
 CONF_USE_LOCATION = "use_location"
+CONF_TEST_MODE = "test_mode"
 PLATFORMS = ["sensor"]
 
 # NVE API Base URLs

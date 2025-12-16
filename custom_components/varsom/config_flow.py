@@ -20,6 +20,7 @@ from .const import (
     CONF_COUNTY_NAME,
     CONF_WARNING_TYPE,
     CONF_MUNICIPALITY_FILTER,
+    CONF_TEST_MODE,
     API_BASE_LANDSLIDE,
     COUNTIES,
     WARNING_TYPE_LANDSLIDE,
@@ -174,6 +175,9 @@ class VarsomOptionsFlow(config_entries.OptionsFlow):
         current_municipality_filter = self.config_entry.options.get(
             CONF_MUNICIPALITY_FILTER, self.config_entry.data.get(CONF_MUNICIPALITY_FILTER, "")
         )
+        current_test_mode = self.config_entry.options.get(
+            CONF_TEST_MODE, self.config_entry.data.get(CONF_TEST_MODE, False)
+        )
 
         data_schema = vol.Schema(
             {
@@ -187,6 +191,7 @@ class VarsomOptionsFlow(config_entries.OptionsFlow):
                 }),
                 vol.Optional(CONF_LANG, default=current_lang): vol.In(["no", "en"]),
                 vol.Optional(CONF_MUNICIPALITY_FILTER, default=current_municipality_filter): cv.string,
+                vol.Optional(CONF_TEST_MODE, default=current_test_mode): cv.boolean,
             }
         )
 

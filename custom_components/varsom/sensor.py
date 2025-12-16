@@ -25,6 +25,7 @@ from .const import (
     CONF_COUNTY_NAME,
     CONF_WARNING_TYPE,
     CONF_MUNICIPALITY_FILTER,
+    CONF_TEST_MODE,
     API_BASE_LANDSLIDE,
     API_BASE_FLOOD,
     WARNING_TYPE_LANDSLIDE,
@@ -54,8 +55,9 @@ async def async_setup_entry(
     warning_type = config.get(CONF_WARNING_TYPE) or entry.data.get(CONF_WARNING_TYPE)
     lang = config.get(CONF_LANG) or entry.data.get(CONF_LANG, "en")
     municipality_filter = config.get(CONF_MUNICIPALITY_FILTER, "")
+    test_mode = config.get(CONF_TEST_MODE, False)
     
-    coordinator = VarsomAlertsCoordinator(hass, county_id, county_name, warning_type, lang)
+    coordinator = VarsomAlertsCoordinator(hass, county_id, county_name, warning_type, lang, test_mode)
     await coordinator.async_config_entry_first_refresh()
     
     # Create sensors
@@ -76,7 +78,7 @@ async def async_setup_entry(
 class VarsomAlertsCoordinator(DataUpdateCoordinator):
     """Class to manage fetching Varsom Alerts data."""
 
-    def __init__(self, hass, county_id, county_name, warning_type, lang):
+    def __init__(self, hass, county_id, county_name, warning_type, lang, test_mode=False):
         """Initialize coordinator."""
         super().__init__(
             hass,
@@ -88,6 +90,7 @@ class VarsomAlertsCoordinator(DataUpdateCoordinator):
         self.county_name = county_name
         self.warning_type = warning_type
         self.lang = lang
+        self.test_mode = test_mode
 
     async def _fetch_warnings(self, base_url: str, danger_type_label: str):
         """Fetch warnings from a specific API endpoint."""
@@ -131,6 +134,32 @@ class VarsomAlertsCoordinator(DataUpdateCoordinator):
         all_warnings = []
         
         try:
+            # Inject test alert if test mode is enabled
+            if self.test_mode:
+                test_alert = {
+                    "Id": 999999,
+                    "ActivityLevel": "3",  # Orange
+                    "DangerLevel": "Moderate",
+                    "MainText": "Test Alert - Orange Landslide Warning for Testville",
+                    "LangKey": 2,
+                    "ValidFrom": "2025-12-16T00:00:00",
+                    "ValidTo": "2025-12-17T23:59:59",
+                    "NextWarningTime": "2025-12-17T08:00:00",
+                    "PublishTime": "2025-12-16T08:00:00",
+                    "Author": "Test System",
+                    "MunicipalityList": [
+                        {
+                            "Id": "9999",
+                            "Name": "Testville",
+                            "CountyId": "46",
+                            "CountyName": "Vestland"
+                        }
+                    ],
+                    "_warning_type": "landslide"
+                }
+                all_warnings.append(test_alert)
+                _LOGGER.info("Test mode: Injected fake orange landslide alert for Testville")
+            
             # Fetch landslide warnings
             if self.warning_type in [WARNING_TYPE_LANDSLIDE, WARNING_TYPE_BOTH]:
                 landslide_warnings = await self._fetch_warnings(API_BASE_LANDSLIDE, "landslide")
