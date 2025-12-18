@@ -461,11 +461,22 @@ class VarsomAlertsSensor(CoordinatorEntity, SensorEntity):
             
             activity_level = alert.get("ActivityLevel", "1")
             
-            # Construct varsom.no URL - path differs by language
-            if self.coordinator.lang == "en":
-                varsom_url = f"https://www.varsom.no/en/flood-and-landslide-warning-service/forecastid/{url_id}" if url_id else None
+            # Construct varsom.no URL - different structure for different warning types
+            warning_type = alert.get("_warning_type", "")
+            
+            if warning_type == "avalanche":
+                # Avalanche warnings - link to general avalanche page since specific region URLs don't exist
+                # Could potentially use UTM coordinates for mapping in the future
+                if self.coordinator.lang == "en":
+                    varsom_url = "https://www.varsom.no/en/avalanche-bulletins"  
+                else:
+                    varsom_url = "https://www.varsom.no/snoskredvarsling"
             else:
-                varsom_url = f"https://www.varsom.no/flom-og-jordskred/varsling/varselid/{url_id}" if url_id else None
+                # Landslide/flood warnings use forecast-based URLs
+                if self.coordinator.lang == "en":
+                    varsom_url = f"https://www.varsom.no/en/flood-and-landslide-warning-service/forecastid/{url_id}" if url_id else None
+                else:
+                    varsom_url = f"https://www.varsom.no/flom-og-jordskred/varsling/varselid/{url_id}" if url_id else None
             
             # Get municipality list
             municipalities = [m.get("Name", "") for m in alert.get("MunicipalityList", [])]
@@ -497,6 +508,16 @@ class VarsomAlertsSensor(CoordinatorEntity, SensorEntity):
                     "consequence_text": alert.get("ConsequenceText", ""),
                     "url": varsom_url,
                 }
+                
+                # Add geographical data for avalanche warnings
+                if warning_type == "avalanche":
+                    alert_dict.update({
+                        "region_id": alert.get("_region_id", alert.get("RegionId")),
+                        "region_name": alert.get("_region_name", alert.get("RegionName")),
+                        "utm_zone": alert.get("UtmZone"),
+                        "utm_east": alert.get("UtmEast"),
+                        "utm_north": alert.get("UtmNorth"),
+                    })
                 alerts_dict[url_id] = alert_dict
         
         # Convert dict back to list
