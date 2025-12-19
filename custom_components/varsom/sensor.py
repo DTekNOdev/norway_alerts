@@ -405,10 +405,16 @@ class VarsomAlertsSensor(CoordinatorEntity, SensorEntity):
                         "current_weaklayers": alert.get("CurrentWeaklayers", ""),
                         "latest_avalanche_activity": alert.get("LatestAvalancheActivity", ""),
                         "latest_observations": alert.get("LatestObservations", ""),
-                        "mountain_weather": alert.get("MountainWeather", {}),
                         "forecaster": alert.get("Author", ""),
                         "danger_level_name": alert.get("DangerLevelName", ""),
                         "exposed_height": alert.get("ExposedHeight1", alert.get("ExposedHeightFill", 0)),
+                        
+                        # Simplified weather fields for easy template access
+                        "wind_speed": alert.get("WindSpeed", ""),
+                        "wind_direction": alert.get("WindDirection", ""),
+                        "temperature": alert.get("Temperature", ""),
+                        "precipitation": alert.get("Precipitation", ""),
+                        "mountain_weather": alert.get("MountainWeather", {}),  # Keep complex structure too
                     })
                 else:
                     # Use generic attributes for landslide and flood warnings

@@ -117,6 +117,19 @@ class AvalancheAPI(BaseWarningAPI):
     def _get_warning_type(self) -> str:
         return "avalanche"
     
+    def _extract_weather_value(self, warning: Dict[str, Any], measurement_type: str, field: str) -> str:
+        """Extract weather values from the complex MountainWeather structure."""
+        try:
+            mountain_weather = warning.get("MountainWeather", {})
+            measurement_types = mountain_weather.get("MeasurementTypes", [])
+            
+            for measurement in measurement_types:
+                if measurement.get("Name", "").lower() == measurement_type.lower():
+                    return str(measurement.get(field, ""))
+            return ""
+        except (KeyError, TypeError, AttributeError):
+            return ""
+    
     async def fetch_warnings(self) -> List[Dict[str, Any]]:
         """Fetch avalanche warnings from NVE API."""
         try:
@@ -228,11 +241,17 @@ class AvalancheAPI(BaseWarningAPI):
                                                         "CurrentWeaklayers": warning.get("CurrentWeaklayers", ""),
                                                         "LatestAvalancheActivity": warning.get("LatestAvalancheActivity", ""),
                                                         "LatestObservations": warning.get("LatestObservations", ""),
-                                                        "MountainWeather": warning.get("MountainWeather", {}),
                                                         "Author": warning.get("Author", ""),
                                                         "DangerLevelName": warning.get("DangerLevelName", ""),
                                                         "ExposedHeightFill": warning.get("ExposedHeightFill", 0),
                                                         "ExposedHeight1": warning.get("ExposedHeight1", 0),
+                                                        
+                                                        # Flattened mountain weather for easy template access
+                                                        "WindSpeed": self._extract_weather_value(warning, "wind", "Speed"),
+                                                        "WindDirection": self._extract_weather_value(warning, "wind", "Direction"),
+                                                        "Temperature": self._extract_weather_value(warning, "temperature", "Value"),
+                                                        "Precipitation": self._extract_weather_value(warning, "precipitation", "Value"),
+                                                        "MountainWeather": warning.get("MountainWeather", {}),  # Keep raw data too
                                                     }
                                                     warnings.append(converted_warning)
                         except Exception as e:

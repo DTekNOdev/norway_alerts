@@ -33,64 +33,68 @@ For a comprehensive avalanche information display:
 ```yaml
 type: markdown
 content: >
-  # 🏔️ {{ states.sensor.varsom_avalanche_vestland.attributes.alerts[0].region_name }}
+  # 🏔️ Avalanche Warnings - Vestland
   
-  ## {{ states.sensor.varsom_avalanche_vestland.attributes.alerts[0].danger_level_name }}
+  {% for alert in states.sensor.varsom_avalanche_vestland.attributes.alerts %}
+  ## {{ alert.region_name }}
   
-  **Valid Period:** {{ states.sensor.varsom_avalanche_vestland.attributes.alerts[0].valid_from | as_timestamp | timestamp_custom('%A %d %B, %H:%M') }} - {{ states.sensor.varsom_avalanche_vestland.attributes.alerts[0].valid_to | as_timestamp | timestamp_custom('%A %d %B, %H:%M') }}
+  ### {{ alert.danger_level_name }}
   
-  ### 📢 Main Warning
-  {{ states.sensor.varsom_avalanche_vestland.attributes.alerts[0].main_text }}
+  **Valid Period:** {{ alert.valid_from | as_timestamp | timestamp_custom('%A %d %B, %H:%M') }} - {{ alert.valid_to | as_timestamp | timestamp_custom('%A %d %B, %H:%M') }}
   
-  {% if states.sensor.varsom_avalanche_vestland.attributes.alerts[0].emergency_warning %}
-  ### 🚨 Emergency Warning  
-  {{ states.sensor.varsom_avalanche_vestland.attributes.alerts[0].emergency_warning }}
+  #### 📢 Main Warning
+  {{ alert.main_text }}
+  
+  {% if alert.emergency_warning and alert.emergency_warning != "Not given" %}
+  #### 🚨 Emergency Warning  
+  {{ alert.emergency_warning }}
   {% endif %}
   
-  ### ⚡ Avalanche Danger Assessment
-  {{ states.sensor.varsom_avalanche_vestland.attributes.alerts[0].avalanche_danger }}
-  
-  ### ❄️ Snow Conditions
-  **Surface:** {{ states.sensor.varsom_avalanche_vestland.attributes.alerts[0].snow_surface }}
-  
-  **Weak Layers:** {{ states.sensor.varsom_avalanche_vestland.attributes.alerts[0].current_weaklayers }}
-  
-  ### 📊 Recent Activity & Observations
-  {% if states.sensor.varsom_avalanche_vestland.attributes.alerts[0].latest_avalanche_activity %}
-  **Recent Avalanches:** {{ states.sensor.varsom_avalanche_vestland.attributes.alerts[0].latest_avalanche_activity }}
+  {% if alert.avalanche_danger %}
+  #### ⚡ Avalanche Danger Assessment
+  {{ alert.avalanche_danger | truncate(200) }}...
   {% endif %}
   
-  **Field Observations:** {{ states.sensor.varsom_avalanche_vestland.attributes.alerts[0].latest_observations }}
+  #### ❄️ Snow Conditions
+  {% if alert.snow_surface %}
+  **Surface:** {{ alert.snow_surface | truncate(150) }}...
+  {% endif %}
   
-  ### 🎯 Avalanche Problems
-  {% for problem in states.sensor.varsom_avalanche_vestland.attributes.alerts[0].avalanche_problems %}
-  **Problem {{ loop.index }}:** {{ problem.AvalancheExtName }}  
-  **Cause:** {{ problem.AvalCauseName }}  
-  **Probability:** {{ problem.AvalProbabilityName }}  
-  **Trigger:** {{ problem.AvalTriggerSimpleName }}  
+  {% if alert.current_weaklayers %}
+  **Weak Layers:** {{ alert.current_weaklayers | truncate(150) }}...
+  {% endif %}
+  
+  #### 📊 Recent Activity & Observations
+  {% if alert.latest_avalanche_activity %}
+  **Recent Avalanches:** {{ alert.latest_avalanche_activity | truncate(120) }}...
+  {% endif %}
+  
+  {% if alert.latest_observations %}
+  **Field Observations:** {{ alert.latest_observations | truncate(120) }}...
+  {% endif %}
+  
+  #### 🎯 Avalanche Problems ({{ alert.avalanche_problems | length }})
+  {% for problem in alert.avalanche_problems %}
+  **{{ problem.AvalancheExtName }}** - {{ problem.AvalCauseName }} ({{ problem.AvalProbabilityName }})
   {% if problem.AvalancheExtName == "Dry slab avalanche" %}🎿{% elif problem.AvalancheExtName == "Wet avalanche" %}💧{% else %}⚠️{% endif %}
   {% endfor %}
   
-  ### 🛡️ Safety Advice
-  {% for advice in states.sensor.varsom_avalanche_vestland.attributes.alerts[0].avalanche_advices %}
-  **{{ loop.index }}.** {{ advice.Text }}
-  {% if advice.ImageUrl %}
-  ![Safety advice]({{ advice.ImageUrl }})
-  {% endif %}
+  #### 🛡️ Safety Advice ({{ alert.avalanche_advices | length }})
+  {% for advice in alert.avalanche_advices %}
+  **{{ loop.index }}.** {{ advice.Text | truncate(100) }}...
   {% endfor %}
   
-  ### 🌤️ Mountain Weather Impact
-  {% set weather = states.sensor.varsom_avalanche_vestland.attributes.alerts[0].mountain_weather %}
-  {% if weather %}
-  **Wind:** {{ weather.WindSpeed }} {{ weather.WindDirection }}  
-  **Temperature:** {{ weather.Temperature }}°C  
-  **Precipitation:** {{ weather.Precipitation }}
+  {% if alert.wind_speed or alert.temperature %}
+  #### 🌤️ Mountain Weather
+  **Wind:** {{ alert.wind_speed }} {{ alert.wind_direction }} | **Temp:** {{ alert.temperature }}°C | **Precip:** {{ alert.precipitation }}
   {% endif %}
   
+  **Elevation:** {{ alert.exposed_height }}m+ | **Forecaster:** {{ alert.forecaster }} | **Region:** {{ alert.region_id }}
+  
   ---
-  **Elevation:** {{ states.sensor.varsom_avalanche_vestland.attributes.alerts[0].exposed_height }}m+  
-  **Forecaster:** {{ states.sensor.varsom_avalanche_vestland.attributes.alerts[0].forecaster }}  
-  **Region ID:** {{ states.sensor.varsom_avalanche_vestland.attributes.alerts[0].region_id }}
+  {% endfor %}
+  
+  *Total: {{ states.sensor.varsom_avalanche_vestland.attributes.alerts | length }} avalanche regions*
 ```
 
 ## Comparison: Landslide vs Avalanche Display
