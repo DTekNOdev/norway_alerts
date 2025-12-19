@@ -4,6 +4,12 @@ This document shows how to display the rich avalanche-specific attributes in Hom
 
 **Note**: Each alert includes an `entity_picture` attribute with the official Yr.no warning icon that matches the danger level and warning type. These can be displayed in templates using `<img>` tags.
 
+**Icon Color Mapping**:
+- Level 2 (Moderate) → Yellow warning icon
+- Level 3 (Considerable) → Orange warning icon  
+- Level 4 (High) → Red warning icon
+- Level 5 (Extreme) → Black warning icon
+
 ## Simple Display Template
 
 For a basic avalanche warning card:
@@ -11,7 +17,7 @@ For a basic avalanche warning card:
 ```yaml
 type: markdown
 content: >
-  ## <img src="{{ states.sensor.varsom_avalanche_vestland.attributes.alerts[0].entity_picture }}" width="24" height="24"> {{ states.sensor.varsom_avalanche_vestland.attributes.alerts[0].region_name }}
+  ## <img src="{{ states.sensor.varsom_avalanche_vestland.attributes.alerts[0].entity_picture }}" width="24" height="24" style="filter: none !important; vertical-align: middle;"> {{ states.sensor.varsom_avalanche_vestland.attributes.alerts[0].region_name }}
   
   **Danger Level:** {{ states.sensor.varsom_avalanche_vestland.attributes.alerts[0].danger_level_name }}  
   **Valid:** {{ states.sensor.varsom_avalanche_vestland.attributes.alerts[0].valid_from | as_timestamp | timestamp_custom('%d/%m %H:%M') }} - {{ states.sensor.varsom_avalanche_vestland.attributes.alerts[0].valid_to | as_timestamp | timestamp_custom('%d/%m %H:%M') }}
@@ -41,6 +47,32 @@ content: >
   **Valid:** {{ states.sensor.varsom_avalanche_vestland.attributes.alerts[0].valid_from | as_timestamp | timestamp_custom('%d/%m %H:%M') }} - {{ states.sensor.varsom_avalanche_vestland.attributes.alerts[0].valid_to | as_timestamp | timestamp_custom('%d/%m %H:%M') }}
 ```
 
+### Debug Template (to check icon selection)
+
+If you want to debug which icon is being selected:
+
+```yaml
+type: markdown
+content: >
+  ## Debug: {{ states.sensor.varsom_avalanche_vestland.attributes.alerts[0].region_name }}
+  
+  - **Activity Level**: {{ states.sensor.varsom_avalanche_vestland.attributes.alerts[0].level }}
+  - **Danger Level Name**: {{ states.sensor.varsom_avalanche_vestland.attributes.alerts[0].danger_level_name }}
+  - **Icon URL**: {{ states.sensor.varsom_avalanche_vestland.attributes.alerts[0].entity_picture }}
+  
+  <img src="{{ states.sensor.varsom_avalanche_vestland.attributes.alerts[0].entity_picture }}" width="48" height="48" style="background-color: lightgray; filter: none !important; opacity: 1 !important;">
+  
+  If icon appears black, try this version with CSS overrides:
+  <img src="{{ states.sensor.varsom_avalanche_vestland.attributes.alerts[0].entity_picture }}" width="48" height="48" style="background: white; border: 1px solid #ccc; filter: brightness(1) contrast(1) saturate(1) !important;">
+  
+  Expected mapping:
+  - Level 1 = Green (no icon)
+  - Level 2 = Yellow icon 🟡
+  - Level 3 = Orange icon 🟠  
+  - Level 4 = Red icon 🔴
+  - Level 5 = Black icon ⚫
+```
+
 ## Detailed Display Template
 
 For a comprehensive avalanche information display:
@@ -51,7 +83,7 @@ content: >
   # 🏔️ Avalanche Warnings - Vestland
   
   {% for alert in states.sensor.varsom_avalanche_vestland.attributes.alerts %}
-  ## <img src="{{ alert.entity_picture }}" width="32" height="32"> {{ alert.region_name }}
+  ## <img src="{{ alert.entity_picture }}" width="32" height="32" style="filter: none !important; vertical-align: middle;"> {{ alert.region_name }}
   
   ### {{ alert.danger_level_name }}
   
@@ -110,6 +142,41 @@ content: >
   {% endfor %}
   
   *Total: {{ states.sensor.varsom_avalanche_vestland.attributes.alerts | length }} avalanche regions*
+```
+
+## Icon Color Issues Troubleshooting
+
+If the warning icons appear black instead of their intended colors (yellow/orange/red), this is due to Home Assistant CSS overrides. Here are several solutions:
+
+### Solution 1: CSS Override Template
+```yaml
+type: markdown
+content: >
+  <style>
+  img[src*="data:image/svg+xml"] {
+    filter: none !important;
+    opacity: 1 !important;
+  }
+  </style>
+  
+  ## <img src="{{ states.sensor.varsom_avalanche_vestland.attributes.alerts[0].entity_picture }}" width="32" height="32"> {{ states.sensor.varsom_avalanche_vestland.attributes.alerts[0].region_name }}
+  
+  **Activity Level {{ states.sensor.varsom_avalanche_vestland.attributes.alerts[0].level }}** - {{ states.sensor.varsom_avalanche_vestland.attributes.alerts[0].danger_level_name }}
+```
+
+### Solution 2: Background Contrast Method
+```yaml
+type: markdown
+content: >
+  ## <img src="{{ states.sensor.varsom_avalanche_vestland.attributes.alerts[0].entity_picture }}" width="32" height="32" style="background: white; border: 2px solid #ddd; border-radius: 4px; padding: 2px;"> {{ states.sensor.varsom_avalanche_vestland.attributes.alerts[0].region_name }}
+```
+
+### Solution 3: Use Emoji Fallback
+If CSS fixes don't work, use emoji indicators instead:
+```yaml
+type: markdown
+content: >
+  ## {% if states.sensor.varsom_avalanche_vestland.attributes.alerts[0].level == 2 %}🟡{% elif states.sensor.varsom_avalanche_vestland.attributes.alerts[0].level == 3 %}🟠{% elif states.sensor.varsom_avalanche_vestland.attributes.alerts[0].level == 4 %}🔴{% elif states.sensor.varsom_avalanche_vestland.attributes.alerts[0].level == 5 %}⚫{% endif %} {{ states.sensor.varsom_avalanche_vestland.attributes.alerts[0].region_name }}
 ```
 
 ## Comparison: Landslide vs Avalanche Display
