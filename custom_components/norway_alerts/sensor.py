@@ -633,11 +633,13 @@ class VarsomAlertsSensor(CoordinatorEntity, SensorEntity):
                 
                 if is_metalert:
                     # Met.no weather alerts - use CAP-based fields
+                    area_str = alert.get("area", "")
                     alert_dict.update({
                         "title": alert.get("title", ""),
                         "event": alert.get("event", ""),
                         "event_type": alert.get("event", "").lower().replace(" ", "_") if alert.get("event") else "",
-                        "areas": alert.get("area", "").split(", ") if alert.get("area") else [],
+                        "area": area_str,  # Keep as string for template access
+                        "areas": area_str.split(", ") if area_str else [],  # Also as list for programmatic access
                         "description": alert.get("description", ""),
                         "instruction": alert.get("instruction", ""),
                         "consequences": alert.get("consequences", ""),
