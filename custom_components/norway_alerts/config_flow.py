@@ -204,11 +204,17 @@ class VarsomConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             schema_dict[vol.Required(CONF_LONGITUDE, default=default_lon)] = cv.longitude
         
         data_schema = vol.Schema(schema_dict)
+        
+        # Set descriptive title based on warning type
+        description_placeholders = {
+            "warning_type": warning_type.replace('_', ' ').title()
+        }
 
         return self.async_show_form(
             step_id="location",
             data_schema=data_schema,
             errors=errors,
+            description_placeholders=description_placeholders,
         )
 
     @staticmethod

@@ -5,10 +5,10 @@
     "@jm-cook"
   ],
   "config_flow": true,
-  "documentation": "https://github.com/jm-cook/no.varsom",
+  "documentation": "https://github.com/jm-cook/norway_alerts",
   "integration_type": "service",
   "iot_class": "cloud_polling",
-  "issue_tracker": "https://github.com/jm-cook/no.varsom/issues",
+  "issue_tracker": "https://github.com/jm-cook/norway_alerts/issues",
   "requirements": [],
   "version": "1.0.0"
 }

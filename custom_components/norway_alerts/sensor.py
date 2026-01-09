@@ -390,13 +390,13 @@ class VarsomAlertsSensor(CoordinatorEntity, SensorEntity):
         warning_type_label = warning_type.replace("_", " ").title()
         
         if is_main:
-            # Main sensor shows all county alerts
-            self._attr_name = f"Varsom {warning_type_label} {county_name}"
+            # Main sensor shows all alerts for the location
+            self._attr_name = f"Norway Alerts {warning_type_label} {county_name}"
             self._attr_unique_id = f"{entry_id}_alerts"
             self._use_filter = False
         else:
             # Filtered sensor shows only selected municipalities
-            self._attr_name = f"Varsom {warning_type_label} My Area"
+            self._attr_name = f"Norway Alerts {warning_type_label} My Area"
             self._attr_unique_id = f"{entry_id}_alerts_filtered"
             self._use_filter = True
         
@@ -470,15 +470,29 @@ class VarsomAlertsSensor(CoordinatorEntity, SensorEntity):
     def extra_state_attributes(self):
         """Return the state attributes with all alerts."""
         if not self.coordinator.data:
-            return {
+            base_attrs = {
                 "active_alerts": 0,
                 "highest_level": "green",
                 "highest_level_numeric": 1,
                 "alerts": [],
-                "county_name": self._county_name,
-                "county_id": self.coordinator.county_id,
-                "municipality_filter": self._municipality_filter if self._use_filter else None,
             }
+            
+            # Add location-specific attributes
+            if self.coordinator.county_id:
+                # County-based (NVE) attributes
+                base_attrs.update({
+                    "county_name": self._county_name,
+                    "county_id": self.coordinator.county_id,
+                    "municipality_filter": self._municipality_filter if self._use_filter else None,
+                })
+            else:
+                # Coordinate-based (Met.no) attributes
+                base_attrs.update({
+                    "latitude": self.coordinator.latitude,
+                    "longitude": self.coordinator.longitude,
+                })
+            
+            return base_attrs
         
         # Apply municipality filter if this is the filtered sensor
         data_to_use = self._filter_alerts(self.coordinator.data) if self._use_filter else self.coordinator.data
@@ -612,15 +626,29 @@ class VarsomAlertsSensor(CoordinatorEntity, SensorEntity):
         # Sort by level (highest first), then by valid_from
         alerts_list.sort(key=lambda x: (x["level"], x.get("valid_from", "")), reverse=True)
         
-        return {
+        result = {
             "active_alerts": len(alerts_list),
             "highest_level": ACTIVITY_LEVEL_NAMES.get(str(max_level), "green"),
             "highest_level_numeric": max_level,
             "alerts": alerts_list,
-            "county_name": self._county_name,
-            "county_id": self.coordinator.county_id,
-            "municipality_filter": self._municipality_filter if self._use_filter else None,
         }
+        
+        # Add location-specific attributes
+        if self.coordinator.county_id:
+            # County-based (NVE) attributes
+            result.update({
+                "county_name": self._county_name,
+                "county_id": self.coordinator.county_id,
+                "municipality_filter": self._municipality_filter if self._use_filter else None,
+            })
+        else:
+            # Coordinate-based (Met.no) attributes
+            result.update({
+                "latitude": self.coordinator.latitude,
+                "longitude": self.coordinator.longitude,
+            })
+        
+        return result
 
     @property
     def entity_picture(self):
