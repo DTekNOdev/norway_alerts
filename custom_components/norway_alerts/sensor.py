@@ -148,12 +148,12 @@ class VarsomAlertsCoordinator(DataUpdateCoordinator):
                     consequence_text = "Snøskred kan medføre alvorlig fare for liv og helse. Transportruter kan bli stengt."
                     emergency_text = "Test emergency warning text for Testville avalanche alert"
                 elif test_warning_type == WARNING_TYPE_METALERTS:
-                    danger_type_name = "Uvær"
-                    main_text = "Test Alert - Orange Weather Warning"
-                    warning_text = "Det er moderat fare for uvær i området. Kraftig vind og nedbør kan påvirke aktiviteter utendørs."
-                    advice_text = "Vær forberedt på vanskelige værforhold. Følg med på værmeldinger."
-                    consequence_text = "Uvær kan medføre fare for trafikk og utendørsaktiviteter."
-                    emergency_text = "Test emergency warning text for weather alert"
+                    danger_type_name = "Wind"
+                    main_text = "Orange wind warning"
+                    warning_text = "Strong winds expected with gusts up to 25 m/s. This may cause damage to infrastructure and disrupt outdoor activities."
+                    advice_text = "Secure loose objects. Avoid unnecessary travel. Stay informed about weather updates."
+                    consequence_text = "Damage to infrastructure possible. Travel disruptions expected. Outdoor activities hazardous."
+                    emergency_text = "Test emergency weather warning"
                 else:  # landslide
                     danger_type_name = "Jordskred"
                     main_text = "Test Alert - Orange Landslide Warning for Testville"
@@ -162,36 +162,65 @@ class VarsomAlertsCoordinator(DataUpdateCoordinator):
                     consequence_text = "Jordskred kan medføre skade på infrastruktur og fare for liv og helse. Mindre veier kan bli stengt."
                     emergency_text = "Test emergency warning text for Testville landslide alert"
                 
+                # Create base test alert structure
                 test_alert = {
                     "Id": 999999,
                     "ActivityLevel": "3",  # Orange
                     "DangerLevel": "Moderate", 
                     "DangerTypeName": danger_type_name,
                     "MainText": main_text, 
-                    "WarningText": warning_text,
-                    "AdviceText": advice_text,
-                    "ConsequenceText": consequence_text,
-                    "EmergencyWarning": emergency_text,
-                    "LangKey": 2,
-                    "ValidFrom": "2025-12-19T00:00:00",
-                    "ValidTo": "2025-12-20T23:59:59", 
-                    "NextWarningTime": "2025-12-20T08:00:00",
-                    "PublishTime": "2025-12-19T08:00:00",
-                    "DangerIncreaseDateTime": "2025-12-19T12:00:00",
-                    "DangerDecreaseDateTime": "2025-12-20T06:00:00",
-                    "Author": "Test System",
-                    "MunicipalityList": [
-                        {
-                            "Id": "9999", 
-                            "Name": "Testville",
-                            "CountyId": "46",
-                            "CountyName": "Vestland"
-                        }
-                    ],
                     "_warning_type": test_warning_type
                 }
+                
+                # Add type-specific fields
+                if test_warning_type == WARNING_TYPE_METALERTS:
+                    # Metalerts (CAP format) - coordinate-based
+                    test_alert.update({
+                        "ValidFrom": "2025-12-19T00:00:00+01:00",
+                        "ValidTo": "2025-12-20T23:59:59+01:00",
+                        "PublishTime": "2025-12-19T08:00:00+01:00",
+                        "title": "Orange wind warning 2025-12-19T00:00:00+01:00, 2025-12-20T23:59:59+01:00",
+                        "event": "Wind",
+                        "description": warning_text,
+                        "instruction": advice_text,
+                        "consequences": consequence_text,
+                        "certainty": "Likely",
+                        "severity": "Moderate",
+                        "awareness_level": "3; orange; Moderate",
+                        "awareness_type": "2; wind",
+                        "contact": "Norwegian Meteorological Institute",
+                        "county": ["Vestland"],
+                        "area": "Vestland, Bergen",
+                        "resource_url": "https://www.met.no/vaer-og-klima/ekstremvaervarsler-og-andre-faremeldinger",
+                        "web": "https://www.met.no",
+                    })
+                else:
+                    # NVE warnings (landslide, flood, avalanche) - county-based
+                    test_alert.update({
+                        "WarningText": warning_text,
+                        "AdviceText": advice_text,
+                        "ConsequenceText": consequence_text,
+                        "EmergencyWarning": emergency_text,
+                        "LangKey": 2,
+                        "ValidFrom": "2025-12-19T00:00:00",
+                        "ValidTo": "2025-12-20T23:59:59", 
+                        "NextWarningTime": "2025-12-20T08:00:00",
+                        "PublishTime": "2025-12-19T08:00:00",
+                        "DangerIncreaseDateTime": "2025-12-19T12:00:00",
+                        "DangerDecreaseDateTime": "2025-12-20T06:00:00",
+                        "Author": "Test System",
+                        "MunicipalityList": [
+                            {
+                                "Id": "9999", 
+                                "Name": "Testville",
+                                "CountyId": "46",
+                                "CountyName": "Vestland"
+                            }
+                        ],
+                    })
+                
                 all_warnings.append(test_alert)
-                _LOGGER.info("Test mode: Injected fake orange %s alert for Testville", test_warning_type)
+                _LOGGER.info("Test mode: Injected fake orange %s alert", test_warning_type)
             
             # Use API factory to get appropriate API client and fetch warnings
             api_factory = WarningAPIFactory(

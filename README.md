@@ -6,6 +6,30 @@
 [![GitHub Release](https://img.shields.io/github/release/jm-cook/norway_alerts.svg)](https://github.com/jm-cook/norway_alerts/releases)
 ![Project Maintenance](https://img.shields.io/maintenance/yes/2026.svg)
 
+## ⚠️ Breaking Changes in Version 2.0.0
+
+**Version 2.0.0 introduces breaking changes that require migration:**
+
+- **Integration renamed**: `varsom` → `norway_alerts`
+- **Domain changed**: All entity IDs will change from `sensor.varsom_*` to `sensor.norway_alerts_*`
+- **New warning types**: Met.no weather alerts now available alongside NVE geohazard warnings
+- **Architecture change**: One sensor per warning type (previously supported multiple types per sensor)
+
+**Migration Steps:**
+1. Remove the old `varsom` integration completely from **Settings → Devices & Services**
+2. Delete any automations or dashboards referencing old `sensor.varsom_*` entities
+3. Install `norway_alerts` integration (via HACS or manually)
+4. Add integration for each warning type you want to monitor
+5. Update automations and dashboards with new entity IDs
+
+**What's New:**
+- Met.no weather alerts integration (CAP-formatted data)
+- Improved configuration flow with conditional fields
+- Better county support (updated for 2024 Norwegian administrative structure)
+- Enhanced attribute structure with warning-type-specific fields
+
+---
+
 A comprehensive Home Assistant custom integration that provides Norwegian weather and geohazard warnings from multiple official sources:
 - **Landslide, Flood, and Avalanche warnings** from NVE (Norwegian Water Resources and Energy Directorate)
 - **Weather alerts** from Met.no (Norwegian Meteorological Institute)
