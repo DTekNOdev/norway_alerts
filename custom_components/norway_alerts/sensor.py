@@ -55,6 +55,8 @@ async def async_setup_entry(
     # Get coordinator from hass.data (created in __init__.py)
     coordinator = hass.data[DOMAIN][entry.entry_id]
     
+    _LOGGER.debug("Setting up sensor for entry %s", entry.entry_id)
+    
     # Get config from entry.options (preferred) or entry.data (fallback)
     config = entry.options if entry.options else entry.data
     

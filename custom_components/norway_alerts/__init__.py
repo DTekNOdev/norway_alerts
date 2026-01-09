@@ -28,6 +28,8 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Set up Varsom Alerts from a config entry."""
     hass.data.setdefault(DOMAIN, {})
     
+    _LOGGER.debug("Setting up Norway Alerts entry: %s", entry.entry_id)
+    
     # Get config from entry.options (preferred) or entry.data (fallback)
     config = entry.options if entry.options else entry.data
     
@@ -42,9 +44,13 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     latitude = config.get(CONF_LATITUDE) or entry.data.get(CONF_LATITUDE)
     longitude = config.get(CONF_LONGITUDE) or entry.data.get(CONF_LONGITUDE)
     
+    _LOGGER.debug("Config: warning_type=%s, county_id=%s, lat=%s, lon=%s", 
+                  warning_type, county_id, latitude, longitude)
+    
     if county_id:
         # County-based configuration (NVE warnings)
         county_name = config.get(CONF_COUNTY_NAME) or entry.data.get(CONF_COUNTY_NAME, "Unknown")
+        _LOGGER.debug("Creating county-based coordinator for %s (%s)", county_name, county_id)
         coordinator = VarsomAlertsCoordinator(
             hass, county_id, county_name, warning_type, lang, test_mode,
             enable_notifications, notification_severity,
@@ -52,6 +58,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         )
     else:
         # Lat/lon-based configuration (Met.no metalerts)
+        _LOGGER.debug("Creating coordinate-based coordinator for lat=%s, lon=%s", latitude, longitude)
         coordinator = VarsomAlertsCoordinator(
             hass, None, None, warning_type, lang, test_mode,
             enable_notifications, notification_severity,
@@ -59,21 +66,26 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         )
     
     # Do the first refresh before setting up platforms
+    _LOGGER.debug("Performing first refresh for coordinator")
     try:
         await coordinator.async_config_entry_first_refresh()
+        _LOGGER.debug("First refresh completed successfully")
     except Exception as err:
-        _LOGGER.error("Failed to initialize coordinator: %s", err)
+        _LOGGER.error("Failed to initialize coordinator: %s", err, exc_info=True)
         raise ConfigEntryNotReady(f"Failed to connect to API: {err}") from err
     
     # Store coordinator in hass.data for the sensor platform
+    _LOGGER.debug("Storing coordinator in hass.data")
     hass.data[DOMAIN][entry.entry_id] = coordinator
 
     # Forward the setup to the sensor platform
+    _LOGGER.debug("Forwarding setup to sensor platform")
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
     # Register update listener for options changes
     entry.async_on_unload(entry.add_update_listener(update_listener))
-
+    
+    _LOGGER.info("Norway Alerts setup completed successfully")
     return True
 
 
