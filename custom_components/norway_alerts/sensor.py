@@ -26,6 +26,7 @@ from .const import (
     CONF_WARNING_TYPE,
     CONF_MUNICIPALITY_FILTER,
     CONF_TEST_MODE,
+    CONF_CAP_FORMAT,
     CONF_ENABLE_NOTIFICATIONS,
     CONF_NOTIFICATION_SEVERITY,
     WARNING_TYPE_LANDSLIDE,
@@ -44,6 +45,149 @@ from .api import WarningAPIFactory
 _LOGGER = logging.getLogger(__name__)
 
 SCAN_INTERVAL = timedelta(minutes=30)
+
+
+def convert_nve_to_cap(alert: dict, warning_type: str, lang: str) -> dict:
+    """Convert NVE warning format to CAP format for unified display.
+    
+    Maps NVE fields to Common Alerting Protocol (CAP) fields used by Met.no,
+    enabling a single card design to work for both NVE and Met.no alerts.
+    """
+    activity_level = alert.get("ActivityLevel", "1")
+    
+    # Map activity level to CAP severity names
+    severity_map = {
+        "1": "Minor",
+        "2": "Moderate",
+        "3": "Severe",
+        "4": "Extreme",
+        "5": "Extreme",
+    }
+    
+    # Map activity level to CAP awareness level names
+    awareness_map = {
+        "1": "Low",
+        "2": "Moderate",
+        "3": "Severe",
+        "4": "Extreme",
+        "5": "Extreme",
+    }
+    
+    # Get color name
+    color = ACTIVITY_LEVEL_NAMES.get(activity_level, "green")
+    
+    # Extract municipality names for area field
+    municipalities = [m.get("Name", "") for m in alert.get("MunicipalityList", [])]
+    area_str = ", ".join(municipalities) if municipalities else ""
+    
+    # Map warning type to event name
+    event_map = {
+        "landslide": "Landslide",
+        "flood": "Flood",
+        "avalanche": "Avalanche",
+    }
+    event = event_map.get(warning_type, warning_type.title())
+    
+    # Construct varsom.no URL
+    master_id = alert.get("MasterId", "") or alert.get("Id", "")
+    if warning_type == "avalanche":
+        if lang == "en":
+            url = "https://www.varsom.no/en/avalanche-bulletins"
+        else:
+            url = "https://www.varsom.no/snoskredvarsling"
+    else:
+        if lang == "en":
+            url = f"https://www.varsom.no/en/flood-and-landslide-warning-service/forecastid/{master_id}" if master_id else "https://www.varsom.no"
+        else:
+            url = f"https://www.varsom.no/flom-og-jordskred/varsling/varselid/{master_id}" if master_id else "https://www.varsom.no"
+    
+    # Build CAP-formatted dict with all available mappings
+    cap_alert = {
+        # Core identification
+        "id": alert.get("Id", ""),
+        "title": alert.get("MainText", ""),
+        
+        # Timing
+        "starttime": alert.get("ValidFrom", ""),
+        "endtime": alert.get("ValidTo", ""),
+        "valid_from": alert.get("ValidFrom", ""),
+        "valid_to": alert.get("ValidTo", ""),
+        
+        # Event information
+        "event": event,
+        "event_type": warning_type,
+        "event_awareness_name": f"{color}; {event.lower()}",
+        "danger_type": alert.get("DangerTypeName", event),
+        
+        # Location
+        "area": area_str,
+        "areas": municipalities,
+        "municipalities": municipalities,  # Keep for backwards compatibility
+        
+        # Content
+        "description": alert.get("WarningText", ""),
+        "instruction": alert.get("AdviceText", ""),
+        "consequences": alert.get("ConsequenceText", ""),
+        "main_text": alert.get("MainText", ""),
+        
+        # Severity/Level information
+        "level": int(activity_level),
+        "level_name": color,
+        "awareness_level": f"{activity_level}; {color}; {awareness_map.get(activity_level, 'Unknown')}",
+        "awareness_level_numeric": activity_level,
+        "awareness_level_color": color,
+        "awareness_level_name": awareness_map.get(activity_level, "Unknown"),
+        "awareness_type": f"{activity_level}; {warning_type}",
+        "severity": severity_map.get(activity_level, "Unknown"),
+        "certainty": "Likely",  # NVE warnings are official forecasts
+        
+        # Links and resources
+        "url": url,
+        "resource_url": url,
+        "web": "https://www.varsom.no",
+        "resources": [{"uri": url, "mimeType": "text/html"}] if url else [],
+        
+        # Additional metadata
+        "contact": "Norwegian Water Resources and Energy Directorate",
+        "county": [alert.get("MunicipalityList", [{}])[0].get("CountyName", "")] if alert.get("MunicipalityList") else [],
+        "geographic_domain": "land",
+        "risk_matrix_color": color,
+        "trigger_level": None,
+        "ceiling": None,
+        "map_url": None,  # NVE doesn't provide map images
+        
+        # NVE-specific extensions (preserve for power users)
+        "master_id": alert.get("MasterId", ""),
+        "danger_increases": alert.get("DangerIncreaseDateTime"),
+        "danger_decreases": alert.get("DangerDecreaseDateTime"),
+        "emergency_warning": alert.get("EmergencyWarning"),
+        "warning_type": warning_type,
+        
+        # Icon
+        "entity_picture": alert.get("entity_picture"),
+    }
+    
+    # Add avalanche-specific fields if applicable
+    if warning_type == "avalanche":
+        cap_alert.update({
+            "region_id": alert.get("_region_id", alert.get("RegionId")),
+            "region_name": alert.get("_region_name", alert.get("RegionName")),
+            "avalanche_danger": alert.get("AvalancheDanger", ""),
+            "avalanche_problems": alert.get("AvalancheProblems", []),
+            "avalanche_advices": alert.get("AvalancheAdvices", []),
+            "snow_surface": alert.get("SnowSurface", ""),
+            "current_weaklayers": alert.get("CurrentWeaklayers", ""),
+            "latest_avalanche_activity": alert.get("LatestAvalancheActivity", ""),
+            "latest_observations": alert.get("LatestObservations", ""),
+            "forecaster": alert.get("Author", ""),
+            "danger_level_name": alert.get("DangerLevelName", ""),
+            "exposed_height": alert.get("ExposedHeight1", alert.get("ExposedHeightFill", 0)),
+            "utm_zone": alert.get("UtmZone"),
+            "utm_east": alert.get("UtmEast"),
+            "utm_north": alert.get("UtmNorth"),
+        })
+    
+    return cap_alert
 
 
 async def async_setup_entry(
@@ -99,7 +243,7 @@ class VarsomAlertsCoordinator(DataUpdateCoordinator):
 
     def __init__(self, hass, county_id, county_name, warning_type, lang, test_mode=False, 
                  enable_notifications=False, notification_severity=NOTIFICATION_SEVERITY_YELLOW_PLUS,
-                 latitude=None, longitude=None):
+                 cap_format=True, latitude=None, longitude=None):
         """Initialize coordinator."""
         super().__init__(
             hass,
@@ -112,6 +256,7 @@ class VarsomAlertsCoordinator(DataUpdateCoordinator):
         self.warning_type = warning_type
         self.lang = lang
         self.test_mode = test_mode
+        self.cap_format = cap_format  # Whether to convert NVE warnings to CAP format
         self.enable_notifications = enable_notifications
         self.notification_severity = notification_severity
         self.latitude = latitude
@@ -450,6 +595,95 @@ class VarsomAlertsSensor(CoordinatorEntity, SensorEntity):
         self._municipality_filter = municipality_filter.strip()
         self._is_main = is_main
     
+    def _add_metalert_attributes(self, alert_dict: dict, alert: dict) -> None:
+        """Add MetAlerts-specific attributes to alert dict."""
+        area_str = alert.get("area", "")
+        alert_dict.update({
+            "title": alert.get("title", ""),
+            "event": alert.get("event", ""),
+            "event_type": alert.get("event", "").lower().replace(" ", "_") if alert.get("event") else "",
+            "area": area_str,
+            "areas": area_str.split(", ") if area_str else [],
+            "description": alert.get("description", ""),
+            "instruction": alert.get("instruction", ""),
+            "consequences": alert.get("consequences", ""),
+            "certainty": alert.get("certainty", ""),
+            "severity": alert.get("severity", ""),
+            "awareness_level": alert.get("awareness_level", ""),
+            "awareness_level_numeric": alert.get("awareness_level_numeric", ""),
+            "awareness_level_color": alert.get("awareness_level_color", ""),
+            "awareness_level_name": alert.get("awareness_level_name", ""),
+            "awareness_type": alert.get("awareness_type", ""),
+            "event_awareness_name": alert.get("event_awareness_name", ""),
+            "contact": alert.get("contact", ""),
+            "county": alert.get("county", []),
+            "starttime": alert.get("starttime", ""),
+            "endtime": alert.get("endtime", ""),
+            "resources": alert.get("resources", []),
+            "map_url": alert.get("map_url"),
+            "resource_url": alert.get("resource_url", ""),
+            "web": alert.get("web", ""),
+            "geographic_domain": alert.get("geographic_domain", ""),
+            "risk_matrix_color": alert.get("risk_matrix_color", ""),
+            "trigger_level": alert.get("trigger_level"),
+            "ceiling": alert.get("ceiling"),
+        })
+        alert_dict["url"] = alert.get("resource_url") or "https://www.met.no/vaer-og-klima/ekstremvaervarsler-og-andre-faremeldinger"
+    
+    def _add_avalanche_attributes(self, alert_dict: dict, alert: dict, master_id: str, municipalities: list, varsom_url: str) -> None:
+        """Add avalanche-specific attributes to alert dict."""
+        alert_dict.update({
+            # NVE common fields
+            "master_id": master_id,
+            "municipalities": municipalities,
+            "danger_increases": alert.get("DangerIncreaseDateTime"),
+            "danger_decreases": alert.get("DangerDecreaseDateTime"),
+            "url": varsom_url,
+            
+            # Geographical data
+            "region_id": alert.get("_region_id", alert.get("RegionId")),
+            "region_name": alert.get("_region_name", alert.get("RegionName")),
+            "utm_zone": alert.get("UtmZone"),
+            "utm_east": alert.get("UtmEast"),
+            "utm_north": alert.get("UtmNorth"),
+            
+            # Avalanche-specific information
+            "avalanche_danger": alert.get("AvalancheDanger", ""),
+            "emergency_warning": alert.get("EmergencyWarning", ""),
+            "avalanche_problems": alert.get("AvalancheProblems", []),
+            "avalanche_advices": alert.get("AvalancheAdvices", []),
+            "snow_surface": alert.get("SnowSurface", ""),
+            "current_weaklayers": alert.get("CurrentWeaklayers", ""),
+            "latest_avalanche_activity": alert.get("LatestAvalancheActivity", ""),
+            "latest_observations": alert.get("LatestObservations", ""),
+            "forecaster": alert.get("Author", ""),
+            "danger_level_name": alert.get("DangerLevelName", ""),
+            "exposed_height": alert.get("ExposedHeight1", alert.get("ExposedHeightFill", 0)),
+            
+            # Simplified weather fields
+            "wind_speed": alert.get("WindSpeed", ""),
+            "wind_direction": alert.get("WindDirection", ""),
+            "temperature": alert.get("Temperature", ""),
+            "precipitation": alert.get("Precipitation", ""),
+            "mountain_weather": alert.get("MountainWeather", {}),
+        })
+    
+    def _add_nve_generic_attributes(self, alert_dict: dict, alert: dict, master_id: str, municipalities: list, varsom_url: str) -> None:
+        """Add NVE generic attributes (landslide/flood) to alert dict."""
+        alert_dict.update({
+            # NVE common fields
+            "master_id": master_id,
+            "municipalities": municipalities,
+            "danger_increases": alert.get("DangerIncreaseDateTime"),
+            "danger_decreases": alert.get("DangerDecreaseDateTime"),
+            "url": varsom_url,
+            
+            # Generic warning fields
+            "warning_text": alert.get("WarningText", ""),
+            "advice_text": alert.get("AdviceText", ""),
+            "consequence_text": alert.get("ConsequenceText", ""),
+        })
+    
     def _filter_alerts(self, alerts):
         """Filter alerts by municipality if filter is set."""
         if not self._municipality_filter:
@@ -615,110 +849,37 @@ class VarsomAlertsSensor(CoordinatorEntity, SensorEntity):
                 else:
                     individual_icon = None
                 
-                # New alert - create base dict with common fields only
-                alert_dict = {
-                    "id": forecast_id,
-                    "level": int(activity_level),
-                    "level_name": ACTIVITY_LEVEL_NAMES.get(activity_level, "unknown"),
-                    "danger_type": alert.get("DangerTypeName", ""),
-                    "warning_type": alert.get("_warning_type", "unknown"),
-                    "valid_from": alert.get("ValidFrom", ""),
-                    "valid_to": alert.get("ValidTo", ""),
-                    "main_text": alert.get("MainText", ""),
-                    "entity_picture": individual_icon,
-                }
-                
-                # Add warning-type-specific attributes
                 # Detect MetAlerts by presence of CAP-specific 'event' field
                 is_metalert = "event" in alert and "awareness_level" in alert
                 
-                if is_metalert:
-                    # Met.no weather alerts - use CAP-based fields
-                    area_str = alert.get("area", "")
-                    alert_dict.update({
-                        "title": alert.get("title", ""),
-                        "event": alert.get("event", ""),
-                        "event_type": alert.get("event", "").lower().replace(" ", "_") if alert.get("event") else "",
-                        "area": area_str,  # Keep as string for template access
-                        "areas": area_str.split(", ") if area_str else [],  # Also as list for programmatic access
-                        "description": alert.get("description", ""),
-                        "instruction": alert.get("instruction", ""),
-                        "consequences": alert.get("consequences", ""),
-                        "certainty": alert.get("certainty", ""),
-                        "severity": alert.get("severity", ""),
-                        "awareness_level": alert.get("awareness_level", ""),
-                        "awareness_level_numeric": alert.get("awareness_level_numeric", ""),
-                        "awareness_level_color": alert.get("awareness_level_color", ""),
-                        "awareness_level_name": alert.get("awareness_level_name", ""),
-                        "awareness_type": alert.get("awareness_type", ""),
-                        "event_awareness_name": alert.get("event_awareness_name", ""),
-                        "contact": alert.get("contact", ""),
-                        "county": alert.get("county", []),
-                        "starttime": alert.get("starttime", ""),
-                        "endtime": alert.get("endtime", ""),
-                        "resources": alert.get("resources", []),
-                        "map_url": alert.get("map_url"),
-                        "resource_url": alert.get("resource_url", ""),
-                        "web": alert.get("web", ""),
-                        "geographic_domain": alert.get("geographic_domain", ""),
-                        "risk_matrix_color": alert.get("risk_matrix_color", ""),
-                        "trigger_level": alert.get("trigger_level"),
-                        "ceiling": alert.get("ceiling"),
-                    })
-                    # Override URL for Met.no alerts
-                    alert_dict["url"] = alert.get("resource_url") or "https://www.met.no/vaer-og-klima/ekstremvaervarsler-og-andre-faremeldinger"
-                elif warning_type == "avalanches":
-                    # Avalanche warnings - NVE specific fields
-                    alert_dict.update({
-                        # NVE common fields
-                        "master_id": master_id,
-                        "municipalities": municipalities,
-                        "danger_increases": alert.get("DangerIncreaseDateTime"),
-                        "danger_decreases": alert.get("DangerDecreaseDateTime"),
-                        "url": varsom_url,
-                        
-                        # Geographical data
-                        "region_id": alert.get("_region_id", alert.get("RegionId")),
-                        "region_name": alert.get("_region_name", alert.get("RegionName")),
-                        "utm_zone": alert.get("UtmZone"),
-                        "utm_east": alert.get("UtmEast"),
-                        "utm_north": alert.get("UtmNorth"),
-                        
-                        # Avalanche-specific information (instead of warning_text/advice_text/consequence_text)
-                        "avalanche_danger": alert.get("AvalancheDanger", ""),
-                        "emergency_warning": alert.get("EmergencyWarning", ""),
-                        "avalanche_problems": alert.get("AvalancheProblems", []),
-                        "avalanche_advices": alert.get("AvalancheAdvices", []),
-                        "snow_surface": alert.get("SnowSurface", ""),
-                        "current_weaklayers": alert.get("CurrentWeaklayers", ""),
-                        "latest_avalanche_activity": alert.get("LatestAvalancheActivity", ""),
-                        "latest_observations": alert.get("LatestObservations", ""),
-                        "forecaster": alert.get("Author", ""),
-                        "danger_level_name": alert.get("DangerLevelName", ""),
-                        "exposed_height": alert.get("ExposedHeight1", alert.get("ExposedHeightFill", 0)),
-                        
-                        # Simplified weather fields for easy template access
-                        "wind_speed": alert.get("WindSpeed", ""),
-                        "wind_direction": alert.get("WindDirection", ""),
-                        "temperature": alert.get("Temperature", ""),
-                        "precipitation": alert.get("Precipitation", ""),
-                        "mountain_weather": alert.get("MountainWeather", {}),  # Keep complex structure too
-                    })
+                # If CAP format is enabled and this is an NVE warning, convert it
+                if self.coordinator.cap_format and not is_metalert:
+                    # Convert NVE format to CAP format for unified display
+                    alert["entity_picture"] = individual_icon  # Add icon before conversion
+                    alert_dict = convert_nve_to_cap(alert, warning_type, self.coordinator.lang)
                 else:
-                    # Landslide and flood warnings - NVE generic attributes
-                    alert_dict.update({
-                        # NVE common fields
-                        "master_id": master_id,
-                        "municipalities": municipalities,
-                        "danger_increases": alert.get("DangerIncreaseDateTime"),
-                        "danger_decreases": alert.get("DangerDecreaseDateTime"),
-                        "url": varsom_url,
-                        
-                        # Generic warning fields
-                        "warning_text": alert.get("WarningText", ""),
-                        "advice_text": alert.get("AdviceText", ""),
-                        "consequence_text": alert.get("ConsequenceText", ""),
-                    })
+                    # Use native format (either MetAlerts CAP or NVE native)
+                    # Create base dict with common fields
+                    alert_dict = {
+                        "id": forecast_id,
+                        "level": int(activity_level),
+                        "level_name": ACTIVITY_LEVEL_NAMES.get(activity_level, "unknown"),
+                        "danger_type": alert.get("DangerTypeName", ""),
+                        "warning_type": alert.get("_warning_type", "unknown"),
+                        "valid_from": alert.get("ValidFrom", ""),
+                        "valid_to": alert.get("ValidTo", ""),
+                        "main_text": alert.get("MainText", ""),
+                        "entity_picture": individual_icon,
+                    }
+                    
+                    # Add warning-type-specific attributes using helper methods
+                    if is_metalert:
+                        self._add_metalert_attributes(alert_dict, alert)
+                    elif warning_type == "avalanche":
+                        self._add_avalanche_attributes(alert_dict, alert, master_id, municipalities, varsom_url)
+                    else:
+                        self._add_nve_generic_attributes(alert_dict, alert, master_id, municipalities, varsom_url)
+                
                 alerts_dict[url_id] = alert_dict
         
         # Convert dict back to list

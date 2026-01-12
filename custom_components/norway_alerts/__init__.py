@@ -15,6 +15,7 @@ from .const import (
     CONF_LONGITUDE,
     CONF_WARNING_TYPE,
     CONF_TEST_MODE,
+    CONF_CAP_FORMAT,
     CONF_ENABLE_NOTIFICATIONS,
     CONF_NOTIFICATION_SEVERITY,
     NOTIFICATION_SEVERITY_YELLOW_PLUS,
@@ -36,6 +37,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     warning_type = config.get(CONF_WARNING_TYPE) or entry.data.get(CONF_WARNING_TYPE)
     lang = config.get(CONF_LANG) or entry.data.get(CONF_LANG, "en")
     test_mode = config.get(CONF_TEST_MODE, False)
+    cap_format = config.get(CONF_CAP_FORMAT, True)  # Default to True for CAP format
     enable_notifications = config.get(CONF_ENABLE_NOTIFICATIONS, False)
     notification_severity = config.get(CONF_NOTIFICATION_SEVERITY, NOTIFICATION_SEVERITY_YELLOW_PLUS)
     
@@ -44,8 +46,8 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     latitude = config.get(CONF_LATITUDE) or entry.data.get(CONF_LATITUDE)
     longitude = config.get(CONF_LONGITUDE) or entry.data.get(CONF_LONGITUDE)
     
-    _LOGGER.debug("Config: warning_type=%s, county_id=%s, lat=%s, lon=%s", 
-                  warning_type, county_id, latitude, longitude)
+    _LOGGER.debug("Config: warning_type=%s, county_id=%s, lat=%s, lon=%s, cap_format=%s", 
+                  warning_type, county_id, latitude, longitude, cap_format)
     
     if county_id:
         # County-based configuration (NVE warnings)
@@ -53,7 +55,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         _LOGGER.debug("Creating county-based coordinator for %s (%s)", county_name, county_id)
         coordinator = VarsomAlertsCoordinator(
             hass, county_id, county_name, warning_type, lang, test_mode,
-            enable_notifications, notification_severity,
+            enable_notifications, notification_severity, cap_format,
             latitude=None, longitude=None
         )
     else:
@@ -61,7 +63,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         _LOGGER.debug("Creating coordinate-based coordinator for lat=%s, lon=%s", latitude, longitude)
         coordinator = VarsomAlertsCoordinator(
             hass, None, None, warning_type, lang, test_mode,
-            enable_notifications, notification_severity,
+            enable_notifications, notification_severity, cap_format,
             latitude=latitude, longitude=longitude
         )
     

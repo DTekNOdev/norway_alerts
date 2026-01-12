@@ -23,6 +23,7 @@ from .const import (
     CONF_WARNING_TYPE,
     CONF_MUNICIPALITY_FILTER,
     CONF_TEST_MODE,
+    CONF_CAP_FORMAT,
     CONF_ENABLE_NOTIFICATIONS,
     CONF_NOTIFICATION_SEVERITY,
     CONF_METALERTS_LOCATION_MODE,
@@ -110,6 +111,7 @@ class VarsomConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 }),
                 vol.Optional(CONF_LANG, default=DEFAULT_LANG): vol.In(["no", "en"]),
                 vol.Optional(CONF_TEST_MODE, default=False): cv.boolean,
+                vol.Optional(CONF_CAP_FORMAT, default=True): cv.boolean,
                 vol.Optional(CONF_ENABLE_NOTIFICATIONS, default=False): cv.boolean,
                 vol.Optional(CONF_NOTIFICATION_SEVERITY, default=NOTIFICATION_SEVERITY_YELLOW_PLUS): vol.In(NOTIFICATION_SEVERITIES),
             }
@@ -353,6 +355,14 @@ class VarsomOptionsFlow(config_entries.OptionsFlow):
         current_metalerts_mode = self.config_entry.options.get(
             CONF_METALERTS_LOCATION_MODE, self.config_entry.data.get(CONF_METALERTS_LOCATION_MODE, METALERTS_MODE_LATLON)
         )
+        # For existing sensors, preserve current CAP format setting (don't default to True)
+        # This prevents breaking existing templates/cards when editing options
+        current_cap_format = self.config_entry.options.get(
+            CONF_CAP_FORMAT, self.config_entry.data.get(CONF_CAP_FORMAT)
+        )
+        # If no existing value (shouldn't happen), default to False to be safe
+        if current_cap_format is None:
+            current_cap_format = False
         
         # Determine what location fields to show
         needs_county = current_warning_type in [WARNING_TYPE_LANDSLIDE, WARNING_TYPE_FLOOD, WARNING_TYPE_AVALANCHE]
@@ -404,6 +414,7 @@ class VarsomOptionsFlow(config_entries.OptionsFlow):
         schema_dict.update({
             vol.Optional(CONF_LANG, default=current_lang): vol.In(["no", "en"]),
             vol.Optional(CONF_TEST_MODE, default=current_test_mode): cv.boolean,
+            vol.Optional(CONF_CAP_FORMAT, default=current_cap_format): cv.boolean,
             vol.Optional(CONF_ENABLE_NOTIFICATIONS, default=current_enable_notifications): cv.boolean,
             vol.Optional(CONF_NOTIFICATION_SEVERITY, default=current_notification_severity): vol.In(NOTIFICATION_SEVERITIES),
         })

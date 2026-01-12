@@ -23,6 +23,7 @@ CONF_TEST_MODE = "test_mode"
 CONF_ENABLE_NOTIFICATIONS = "enable_notifications"
 CONF_NOTIFICATION_SEVERITY = "notification_severity"
 CONF_METALERTS_LOCATION_MODE = "metalerts_location_mode"
+CONF_CAP_FORMAT = "cap_format"
 
 # MetAlerts location modes
 METALERTS_MODE_LATLON = "latlon"
