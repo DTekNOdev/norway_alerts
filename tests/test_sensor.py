@@ -2,6 +2,7 @@
 import pytest
 from unittest.mock import AsyncMock, patch, MagicMock
 from datetime import datetime
+from homeassistant.helpers import frame
 
 from custom_components.norway_alerts.const import (
     CONF_WARNING_TYPE, 
@@ -20,13 +21,15 @@ class TestNorwayAlertsCoordinator:
         """Test coordinator update when alerts exist."""
         from custom_components.norway_alerts.sensor import NorwayAlertsCoordinator
         
-        coordinator = NorwayAlertsCoordinator(
-            hass=mock_hass,
-            county_id="46",
-            county_name="Vestland",
-            warning_type=WARNING_TYPE_LANDSLIDE,
-            lang="en",
-        )
+        # Mock frame.report_usage to avoid frame helper issues in Python 3.13
+        with patch("homeassistant.helpers.frame.report_usage"):
+            coordinator = NorwayAlertsCoordinator(
+                hass=mock_hass,
+                county_id="46",
+                county_name="Vestland",
+                warning_type=WARNING_TYPE_LANDSLIDE,
+                lang="en",
+            )
         
         # Mock the WarningAPIFactory and API client
         with patch("custom_components.norway_alerts.sensor.WarningAPIFactory") as mock_factory:
@@ -44,13 +47,15 @@ class TestNorwayAlertsCoordinator:
         """Test coordinator update when no alerts exist."""
         from custom_components.norway_alerts.sensor import NorwayAlertsCoordinator
         
-        coordinator = NorwayAlertsCoordinator(
-            hass=mock_hass,
-            county_id="46",
-            county_name="Vestland",
-            warning_type=WARNING_TYPE_LANDSLIDE,
-            lang="en",
-        )
+        # Mock frame.report_usage to avoid frame helper issues in Python 3.13
+        with patch("homeassistant.helpers.frame.report_usage"):
+            coordinator = NorwayAlertsCoordinator(
+                hass=mock_hass,
+                county_id="46",
+                county_name="Vestland",
+                warning_type=WARNING_TYPE_LANDSLIDE,
+                lang="en",
+            )
         
         # Mock the WarningAPIFactory and API client
         with patch("custom_components.norway_alerts.sensor.WarningAPIFactory") as mock_factory:
@@ -71,12 +76,15 @@ class TestNorwayAlertsSensor:
         """Test sensor can be created."""
         from custom_components.norway_alerts.sensor import NorwayAlertsSensor, NorwayAlertsCoordinator
         
-        mock_hass = MagicMock()
-        coordinator = NorwayAlertsCoordinator(
-            hass=mock_hass,
-            county_id="46",
-            county_name="Vestland",
-            warning_type=WARNING_TYPE_LANDSLIDE,
+        # Mock frame.report_usage to avoid frame helper issues in Python 3.13
+        with patch("homeassistant.helpers.frame.report_usage"):
+            coordinator = NorwayAlertsCoordinator(
+                hass=mock_hass,
+                county_id="46",
+                county_name="Vestland",
+                warning_type=WARNING_TYPE_LANDSLIDE,
+                lang="en",
+                warning_type=WARNING_TYPE_LANDSLIDE,
             lang="en",
         )
         
@@ -92,13 +100,16 @@ class TestNorwayAlertsSensor:
 
     def test_sensor_state_with_alerts(self):
         """Test sensor state when alerts exist."""
-        from custom_components.norway_alerts.sensor import NorwayAlertsSensor, NorwayAlertsCoordinator
         
-        mock_hass = MagicMock()
-        coordinator = NorwayAlertsCoordinator(
-            hass=mock_hass,
-            county_id="46",
-            county_name="Vestland",
+        # Mock frame.report_usage to avoid frame helper issues in Python 3.13
+        with patch("homeassistant.helpers.frame.report_usage"):
+            coordinator = NorwayAlertsCoordinator(
+                hass=mock_hass,
+                county_id="46",
+                county_name="Vestland",
+                warning_type=WARNING_TYPE_LANDSLIDE,
+                lang="en",
+                county_name="Vestland",
             warning_type=WARNING_TYPE_LANDSLIDE,
             lang="en",
         )
@@ -117,13 +128,16 @@ class TestNorwayAlertsSensor:
 
     def test_sensor_state_no_alerts(self):
         """Test sensor state when no alerts exist."""
-        from custom_components.norway_alerts.sensor import NorwayAlertsSensor, NorwayAlertsCoordinator
         
-        mock_hass = MagicMock()
-        coordinator = NorwayAlertsCoordinator(
-            hass=mock_hass,
-            county_id="46",
-            county_name="Vestland",
+        # Mock frame.report_usage to avoid frame helper issues in Python 3.13
+        with patch("homeassistant.helpers.frame.report_usage"):
+            coordinator = NorwayAlertsCoordinator(
+                hass=mock_hass,
+                county_id="46",
+                county_name="Vestland",
+                warning_type=WARNING_TYPE_LANDSLIDE,
+                lang="en",
+                county_name="Vestland",
             warning_type=WARNING_TYPE_LANDSLIDE,
             lang="en",
         )
