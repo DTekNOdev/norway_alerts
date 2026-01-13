@@ -128,7 +128,9 @@ class TestNorwayAlertsSensor:
 
     def test_sensor_state_no_alerts(self):
         """Test sensor state when no alerts exist."""
-        
+        from custom_components.norway_alerts.sensor import NorwayAlertsCoordinator, NorwayAlertsSensor
+        mock_hass = MagicMock()
+
         # Mock frame.report_usage to avoid frame helper issues in Python 3.13
         with patch("homeassistant.helpers.frame.report_usage"):
             coordinator = NorwayAlertsCoordinator(
