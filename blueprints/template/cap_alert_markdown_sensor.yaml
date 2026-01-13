@@ -27,14 +27,22 @@ blueprint:
       default: true
       selector:
         boolean:
+    sensor_name:
+      name: Sensor Name
+      description: Name for the formatted sensor (will appear as sensor.{name})
+      default: "cap_alerts_formatted"
+      selector:
+        text:
 
 variables:
   alert_sensor: !input alert_sensor
   show_icon: !input show_icon
   show_status: !input show_status
   show_map: !input show_map
-
+  sensor_name: !input sensor_name
 sensor:
+    name: "{{ sensor_name }}"
+    unique_id: "{{ sensor_name }}"
     state: >
       {{ state_attr(alert_sensor, 'active_alerts') | int(0) }}
     attributes:

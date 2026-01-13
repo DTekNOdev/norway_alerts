@@ -1,4 +1,4 @@
-"""Constants for the Varsom Alerts integration.
+"""Constants for the Norway Alerts integration.
 
 Yr warning icons are licensed under CC BY 4.0:
   Yr warning icons © 2015 by Yr/NRK

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
-"""Test script for Varsom Alerts integration.
+"""Test script for Norway Alerts integration.
 
-This script tests the Varsom API connection and displays sample data
+This script tests the NVE API connection and displays sample data
 that will be fetched by the Home Assistant integration.
 """
 import asyncio
@@ -9,8 +9,8 @@ import aiohttp
 import json
 
 
-async def test_varsom_api(county_id="46", warning_type="landslide", lang="en"):
-    """Test the Varsom API connection."""
+async def test_nve_api(county_id="46", warning_type="landslide", lang="en"):
+    """Test the NVE API connection."""
     
     if warning_type == "landslide":
         base_url = "https://api01.nve.no/hydrology/forecast/landslide/v1.0.10"
@@ -20,10 +20,10 @@ async def test_varsom_api(county_id="46", warning_type="landslide", lang="en"):
     url = f"{base_url}/api/Warning/County/{county_id}/{lang}"
     headers = {
         "Accept": "application/json",
-        "User-Agent": "varsom/1.0.0 jeremy.m.cook@gmail.com"
+        "User-Agent": "norway_alerts/2.0.0 jeremy.m.cook@gmail.com"
     }
     
-    print(f"Testing Varsom API")
+    print(f"Testing NVE API")
     print(f"URL: {url}")
     print(f"Warning Type: {warning_type}")
     print(f"County ID: {county_id}")
@@ -114,19 +114,19 @@ async def test_varsom_api(county_id="46", warning_type="landslide", lang="en"):
 
 async def main():
     """Run tests for different counties."""
-    print("Varsom API Test Script")
+    print("Norway Alerts API Test Script")
     print("=" * 80)
     
     # Test Vestland county (46) with landslide warnings
     print("\n\nTest 1: Vestland County - Landslide Warnings")
-    await test_varsom_api(county_id="46", warning_type="landslide", lang="en")
+    await test_nve_api(county_id="46", warning_type="landslide", lang="en")
     
     # Uncomment to test other configurations:
     # print("\n\nTest 2: Rogaland County - Landslide Warnings")
-    # await test_varsom_api(county_id="11", warning_type="landslide", lang="no")
+    # await test_nve_api(county_id="11", warning_type="landslide", lang="no")
     
     # print("\n\nTest 3: Vestland County - Flood Warnings")
-    # await test_varsom_api(county_id="46", warning_type="flood", lang="en")
+    # await test_nve_api(county_id="46", warning_type="flood", lang="en")
 
 
 if __name__ == "__main__":

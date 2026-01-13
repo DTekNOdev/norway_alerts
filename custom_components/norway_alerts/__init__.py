@@ -1,4 +1,4 @@
-"""The Varsom Alerts integration."""
+"""The Norway Alerts integration."""
 import logging
 
 from homeassistant.config_entries import ConfigEntry
@@ -20,13 +20,13 @@ from .const import (
     CONF_NOTIFICATION_SEVERITY,
     NOTIFICATION_SEVERITY_YELLOW_PLUS,
 )
-from .sensor import VarsomAlertsCoordinator
+from .sensor import NorwayAlertsCoordinator
 
 _LOGGER = logging.getLogger(__name__)
 
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
-    """Set up Varsom Alerts from a config entry."""
+    """Set up Norway Alerts from a config entry."""
     hass.data.setdefault(DOMAIN, {})
     
     _LOGGER.debug("Setting up Norway Alerts entry: %s", entry.entry_id)
@@ -53,7 +53,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         # County-based configuration (NVE warnings)
         county_name = config.get(CONF_COUNTY_NAME) or entry.data.get(CONF_COUNTY_NAME, "Unknown")
         _LOGGER.debug("Creating county-based coordinator for %s (%s)", county_name, county_id)
-        coordinator = VarsomAlertsCoordinator(
+        coordinator = NorwayAlertsCoordinator(
             hass, county_id, county_name, warning_type, lang, test_mode,
             enable_notifications, notification_severity, cap_format,
             latitude=None, longitude=None
@@ -61,7 +61,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     else:
         # Lat/lon-based configuration (Met.no metalerts)
         _LOGGER.debug("Creating coordinate-based coordinator for lat=%s, lon=%s", latitude, longitude)
-        coordinator = VarsomAlertsCoordinator(
+        coordinator = NorwayAlertsCoordinator(
             hass, None, None, warning_type, lang, test_mode,
             enable_notifications, notification_severity, cap_format,
             latitude=latitude, longitude=longitude

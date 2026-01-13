@@ -6,7 +6,7 @@ import sys
 import os
 
 # Add the custom components path to find the API
-sys.path.append(os.path.join(os.path.dirname(__file__), 'custom_components', 'varsom'))
+sys.path.append(os.path.join(os.path.dirname(__file__), 'custom_components', 'norway_alerts'))
 
 # We'll need to mock some imports that aren't available outside HA
 class MockLogger:
@@ -21,7 +21,7 @@ _LOGGER = MockLogger()
 class MockConst:
     API_BASE_AVALANCHE = "https://api01.nve.no/hydrology/forecast/avalanche/v6.3.0"
 
-sys.modules['custom_components.varsom.const'] = MockConst
+sys.modules['custom_components.norway_alerts.const'] = MockConst
 
 # Now we can import and test the AvalancheAPI
 import aiohttp

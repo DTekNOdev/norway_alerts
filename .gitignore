@@ -28,3 +28,6 @@ htmlcov/
 
 # Home Assistant
 *.log
+
+# Build artifacts
+custom_components/norway_alerts.zip

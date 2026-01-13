@@ -1,9 +1,33 @@
 # Changelog
 
-All notable changes to the Varsom Alerts integration will be documented in this file.
+All notable changes to the Norway Alerts integration will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
+## [2.1.0] - TBD
+
+### Breaking Changes
+- **Sensor state changed**: State now represents the count of active alerts
+  - Previous: State was highest activity level (1-5) or text string "1" for no alerts
+  - Current: State is integer count (0 = no alerts, 1 = one alert, 2 = two alerts, etc.)
+  - Severity information still available in `highest_level` and `highest_level_numeric` attributes
+  - **Impact**: Automations or templates using `states('sensor.norway_alerts_*')` for severity level need updating
+
+### Added
+- **CAP format conversion** - Optional conversion of NVE warnings to CAP (Common Alerting Protocol) format
+  - Enabled by default for new sensors
+  - Existing sensors preserve their original format for backward compatibility
+  - Allows unified display of NVE and Met.no alerts using the same template
+  - Only available for NVE warnings (landslide, flood, avalanche) - Met.no alerts are always CAP
+- **Template blueprint** - Pre-built template sensor blueprint for displaying CAP-formatted alerts
+  - Available in `blueprints/template/cap_alert_markdown_sensor.yaml`
+  - Import from GitHub for easy setup
+  - Configurable display options (icons, status, maps)
+  - Creates formatted markdown sensor for use in markdown cards
+
+### Changed
+- CAP format option hidden for Met.no weather alerts (always CAP format)
 
 ## [2.0.0] - 2026-01-09
 

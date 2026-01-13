@@ -2,8 +2,8 @@
   "config": {
     "step": {
       "user": {
-        "title": "Set up Varsom Alerts",
-        "description": "Configure Varsom Alerts to receive landslide and flood warnings from NVE",
+        "title": "Set up Norway Alerts",
+        "description": "Configure Norway Alerts to receive landslide and flood warnings from NVE",
         "data": {
           "county_id": "County",
           "warning_type": "Warning Type",
@@ -23,8 +23,8 @@
   "options": {
     "step": {
       "init": {
-        "title": "Update Varsom Alerts configuration",
-        "description": "Update the configuration for this Varsom Alerts instance",
+        "title": "Update Norway Alerts configuration",
+        "description": "Update the configuration for this Norway Alerts instance",
         "data": {
           "county_id": "County",
           "warning_type": "Warning Type",

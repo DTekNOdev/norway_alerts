@@ -1,4 +1,4 @@
-"""Config flow for Varsom Alerts integration."""
+"""Config flow for Norway Alerts integration."""
 import asyncio
 import logging
 
@@ -10,6 +10,7 @@ from homeassistant.const import CONF_NAME, CONF_LATITUDE, CONF_LONGITUDE
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers import config_validation as cv
 
+from .api import _get_user_agent
 from .const import (
     DOMAIN,
     DEFAULT_NAME,
@@ -51,7 +52,7 @@ async def validate_api_connection(hass: HomeAssistant, county_id: str, warning_t
     url = f"{API_BASE_LANDSLIDE}/Warning/County/{county_id}/{lang}"
     headers = {
         "Accept": "application/json",
-        "User-Agent": "varsom/1.0.0 jeremy.m.cook@gmail.com"
+        "User-Agent": _get_user_agent()
     }
     
     try:
@@ -74,8 +75,8 @@ async def validate_api_connection(hass: HomeAssistant, county_id: str, warning_t
         raise ValueError(f"Unexpected error: {err}")
 
 
-class VarsomConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
-    """Handle a config flow for Varsom Alerts."""
+class NorwayAlertsConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
+    """Handle a config flow for Norway Alerts."""
 
     VERSION = 1
 
@@ -278,11 +279,11 @@ class VarsomConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     @callback
     def async_get_options_flow(config_entry):
         """Get the options flow for this handler."""
-        return VarsomOptionsFlow()
+        return NorwayAlertsOptionsFlow()
 
 
-class VarsomOptionsFlow(config_entries.OptionsFlow):
-    """Handle options flow for Varsom Alerts."""
+class NorwayAlertsOptionsFlow(config_entries.OptionsFlow):
+    """Handle options flow for Norway Alerts."""
 
     async def async_step_init(self, user_input=None):
         """Manage the options."""
@@ -414,10 +415,13 @@ class VarsomOptionsFlow(config_entries.OptionsFlow):
         schema_dict.update({
             vol.Optional(CONF_LANG, default=current_lang): vol.In(["no", "en"]),
             vol.Optional(CONF_TEST_MODE, default=current_test_mode): cv.boolean,
-            vol.Optional(CONF_CAP_FORMAT, default=current_cap_format): cv.boolean,
             vol.Optional(CONF_ENABLE_NOTIFICATIONS, default=current_enable_notifications): cv.boolean,
             vol.Optional(CONF_NOTIFICATION_SEVERITY, default=current_notification_severity): vol.In(NOTIFICATION_SEVERITIES),
         })
+        
+        # Only show CAP format option for NVE warnings (not for MetAlerts which are always CAP)
+        if current_warning_type in [WARNING_TYPE_LANDSLIDE, WARNING_TYPE_FLOOD, WARNING_TYPE_AVALANCHE]:
+            schema_dict[vol.Optional(CONF_CAP_FORMAT, default=current_cap_format)] = cv.boolean
         
         data_schema = vol.Schema(schema_dict)
 

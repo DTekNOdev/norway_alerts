@@ -1,4 +1,4 @@
-"""Varsom Alerts sensor platform."""
+"""Norway Alerts sensor platform."""
 import logging
 from datetime import timedelta
 
@@ -195,7 +195,7 @@ async def async_setup_entry(
     entry: ConfigEntry,
     async_add_entities: AddEntitiesCallback,
 ) -> None:
-    """Set up Varsom Alerts sensor from a config entry."""
+    """Set up Norway Alerts sensor from a config entry."""
     # Get coordinator from hass.data (created in __init__.py)
     coordinator = hass.data[DOMAIN][entry.entry_id]
     
@@ -219,27 +219,27 @@ async def async_setup_entry(
         # Create sensors
         entities = [
             # Main sensor with all county alerts
-            VarsomAlertsSensor(coordinator, entry.entry_id, county_name, warning_type, municipality_filter, is_main=True),
+            NorwayAlertsSensor(coordinator, entry.entry_id, county_name, warning_type, municipality_filter, is_main=True),
         ]
         
         # If municipality filter is set, create an additional "My Area" sensor
         if municipality_filter:
             entities.append(
-                VarsomAlertsSensor(coordinator, entry.entry_id, county_name, warning_type, municipality_filter, is_main=False)
+                NorwayAlertsSensor(coordinator, entry.entry_id, county_name, warning_type, municipality_filter, is_main=False)
             )
     else:
         # Lat/lon-based configuration (Met.no metalerts)
         # Create a descriptive location name
         location_name = f"({latitude:.2f}, {longitude:.2f})"
         entities = [
-            VarsomAlertsSensor(coordinator, entry.entry_id, location_name, warning_type, "", is_main=True),
+            NorwayAlertsSensor(coordinator, entry.entry_id, location_name, warning_type, "", is_main=True),
         ]
     
     async_add_entities(entities)
 
 
-class VarsomAlertsCoordinator(DataUpdateCoordinator):
-    """Class to manage fetching Varsom Alerts data."""
+class NorwayAlertsCoordinator(DataUpdateCoordinator):
+    """Class to manage fetching Norway Alerts data."""
 
     def __init__(self, hass, county_id, county_name, warning_type, lang, test_mode=False, 
                  enable_notifications=False, notification_severity=NOTIFICATION_SEVERITY_YELLOW_PLUS,
@@ -536,7 +536,7 @@ class VarsomAlertsCoordinator(DataUpdateCoordinator):
                 {
                     "title": title,
                     "message": message,
-                    "notification_id": f"varsom_{self.county_id}_{warning_type}_{alert.get('Id', 'unknown')}",
+                    "notification_id": f"norway_alerts_{self.county_id}_{warning_type}_{alert.get('Id', 'unknown')}",
                 },
                 blocking=False,
             )
@@ -559,7 +559,7 @@ class VarsomAlertsCoordinator(DataUpdateCoordinator):
                 {
                     "title": title,
                     "message": message,
-                    "notification_id": f"varsom_resolved_{self.county_id}_{warning_type}_{region_name}",
+                    "notification_id": f"norway_alerts_resolved_{self.county_id}_{warning_type}_{region_name}",
                 },
                 blocking=False,
             )
@@ -568,10 +568,10 @@ class VarsomAlertsCoordinator(DataUpdateCoordinator):
             _LOGGER.error("Error sending resolved notification: %s", err)
 
 
-class VarsomAlertsSensor(CoordinatorEntity, SensorEntity):
-    """Representation of a Varsom Alerts sensor with all alerts in attributes."""
+class NorwayAlertsSensor(CoordinatorEntity, SensorEntity):
+    """Representation of a Norway Alerts sensor with all alerts in attributes."""
 
-    def __init__(self, coordinator: VarsomAlertsCoordinator, entry_id: str, county_name: str, warning_type: str, municipality_filter: str = "", is_main: bool = True):
+    def __init__(self, coordinator: NorwayAlertsCoordinator, entry_id: str, county_name: str, warning_type: str, municipality_filter: str = "", is_main: bool = True):
         """Initialize the sensor."""
         super().__init__(coordinator)
         
@@ -724,9 +724,9 @@ class VarsomAlertsSensor(CoordinatorEntity, SensorEntity):
 
     @property
     def native_value(self):
-        """Return the state of the sensor (highest activity level)."""
+        """Return the state of the sensor (number of active alerts)."""
         if not self.coordinator.data:
-            return "1"  # Green - no alerts
+            return 0
         
         # Apply municipality filter if this is the filtered sensor
         data_to_use = self._filter_alerts(self.coordinator.data) if self._use_filter else self.coordinator.data
@@ -737,12 +737,7 @@ class VarsomAlertsSensor(CoordinatorEntity, SensorEntity):
             if alert.get("ActivityLevel", "1") not in ("0", "1")
         ]
         
-        if not active_alerts:
-            return "1"  # Green - no active warnings
-        
-        # Find highest activity level
-        max_level = max(int(alert.get("ActivityLevel", "1")) for alert in active_alerts)
-        return str(max_level)
+        return len(active_alerts)
 
     @property
     def extra_state_attributes(self):

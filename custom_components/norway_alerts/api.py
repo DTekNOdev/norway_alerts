@@ -2,7 +2,9 @@
 
 import asyncio
 import datetime as dt
+import json
 import logging
+import os
 from abc import ABC, abstractmethod
 from typing import List, Dict, Any
 
@@ -16,6 +18,24 @@ from .const import (
 )
 
 _LOGGER = logging.getLogger(__name__)
+
+
+def _get_version() -> str:
+    """Get version from manifest.json."""
+    try:
+        manifest_path = os.path.join(os.path.dirname(__file__), "manifest.json")
+        with open(manifest_path, "r", encoding="utf-8") as f:
+            manifest = json.load(f)
+            return manifest.get("version", "2.0.0")
+    except Exception as e:
+        _LOGGER.warning("Could not read version from manifest.json: %s", e)
+        return "2.0.0"
+
+
+def _get_user_agent() -> str:
+    """Get User-Agent string with version from manifest."""
+    version = _get_version()
+    return f"norway_alerts/{version} jeremy.m.cook@gmail.com"
 
 
 class BaseWarningAPI(ABC):
@@ -48,7 +68,7 @@ class CountyBasedAPI(BaseWarningAPI):
         
         headers = {
             "Accept": "application/json",
-            "User-Agent": "varsom/1.0.0 jeremy.m.cook@gmail.com"
+            "User-Agent": _get_user_agent()
         }
         
         _LOGGER.debug("Fetching %s warnings from: %s", warning_type, url)
@@ -271,14 +291,14 @@ class AvalancheAPI(BaseWarningAPI):
 
 
 # MetAlerts API (originally authored by @kutern84 and @svenove for met_alerts integration)
-# Adapted for inclusion in the Varsom integration to unify Norwegian geohazard services
+# Adapted for inclusion in the Norway Alerts integration to unify Norwegian geohazard services
 # Original source: https://github.com/kurtern84/met_alerts
 # License: MIT (see original repository)
 class MetAlertsAPI(BaseWarningAPI):
     """API client for Met.no weather alerts (metalerts).
     
     Original implementation by @kutern84 and @svenove in the met_alerts integration.
-    This is an adapted version to integrate metalerts into the Varsom integration,
+    This is an adapted version to integrate metalerts into the Norway Alerts integration,
     unifying all Norwegian geohazard services.
     """
     
@@ -319,7 +339,7 @@ class MetAlertsAPI(BaseWarningAPI):
         """Fetch weather alerts from Met.no metalerts API.
         
         Implementation adapted from met_alerts integration by @kutern84 and @svenove.
-        Returns alerts converted to the common Varsom warning format.
+        Returns alerts converted to the common Norway Alerts warning format.
         """
         # Use test endpoint if in test mode
         if self.test_mode:
@@ -336,7 +356,7 @@ class MetAlertsAPI(BaseWarningAPI):
         
         headers = {
             "Accept": "application/json",
-            "User-Agent": "varsom/1.0.0 jeremy.m.cook@gmail.com"
+            "User-Agent": _get_user_agent()
         }
         
         _LOGGER.debug("Fetching metalerts from: %s", url)
@@ -362,7 +382,7 @@ class MetAlertsAPI(BaseWarningAPI):
                         features = json_data.get("features", [])
                         _LOGGER.info("Successfully fetched %d metalerts", len(features))
                         
-                        # Convert metalerts format to Varsom warning format
+                        # Convert metalerts format to common Norway Alerts warning format
                         warnings = []
                         for feature in features:
                             props = feature.get("properties", {})
@@ -393,7 +413,7 @@ class MetAlertsAPI(BaseWarningAPI):
                                         map_url = resource.get("uri")
                                         break
                             
-                            # Convert to Varsom warning format
+                            # Convert to Norway Alerts warning format
                             # Map event types for icon compatibility
                             event_type = props.get("event", "").lower()
                             # Handle special mappings for icons

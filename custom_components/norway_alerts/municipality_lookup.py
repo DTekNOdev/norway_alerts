@@ -1,4 +1,4 @@
-"""Municipality lookup helper for Varsom integration."""
+"""Municipality lookup helper for Norway Alerts integration."""
 import logging
 
 _LOGGER = logging.getLogger(__name__)

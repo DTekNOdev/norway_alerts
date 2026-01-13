@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Add more padding to varsom warning icons for better display in circular masks."""
+"""Add more padding to norway alerts warning icons for better display in circular masks."""
 
 import base64
 import re
@@ -54,7 +54,7 @@ def process_icons():
         print(f"Processed {name}")
     
     # Generate icon_data.py content
-    output = ['"""Base64-encoded SVG icon data for varsom warnings.',
+    output = ['"""Base64-encoded SVG icon data for alerts.',
               '',
               'Icons are from NVE (Norwegian Water Resources and Energy Directorate).',
               'License: CC BY 4.0',

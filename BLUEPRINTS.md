@@ -48,8 +48,7 @@ template:
         show_icon: true
         show_status: true
         show_map: true
-    name: weather_alerts_home_formatted
-    unique_id: weather_alerts_home_formatted
+        sensor_name: weather_alerts_home_formatted
 ```
 
 **Configuration options:**
