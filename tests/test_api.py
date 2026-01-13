@@ -1,6 +1,5 @@
 """Unit tests for Norway Alerts API clients."""
 import pytest
-import asyncio
 from unittest.mock import AsyncMock, patch, MagicMock
 from aiohttp import ClientError
 
@@ -11,14 +10,6 @@ from custom_components.norway_alerts.api import (
     MetAlertsAPI,
     WarningAPIFactory,
 )
-
-
-@pytest.fixture
-def event_loop():
-    """Create an instance of the default event loop for each test case."""
-    loop = asyncio.new_event_loop()
-    yield loop
-    loop.close()
 
 
 class TestLandslideAPI:
