@@ -144,7 +144,10 @@ class TestAvalancheAPI:
                     {"RegionId": 3022, "DangerLevel": 3}
                 ]
             }
-        ]# First call returns summary
+        ]
+        
+        with patch("aiohttp.ClientSession") as mock_session_class:
+            # First call returns summary
             mock_summary_response = MagicMock()
             mock_summary_response.status = 200
             mock_summary_response.json = AsyncMock(return_value=summary_data)
