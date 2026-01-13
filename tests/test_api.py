@@ -158,7 +158,23 @@ class TestAvalancheAPI:
             mock_get_detail.__aexit__ = AsyncMock()
             
             mock_session.get.side_effect = [mock_get_summary, mock_get_detail]
-            mock_session_class.return_val") as mock_session_class:
+            mock_session_class.return_value = mock_session
+            
+            warnings = await api.fetch_warnings()
+            
+            assert len(warnings) == 1
+            assert warnings[0]["_warning_type"] == "avalanches"
+
+
+class TestMetAlertsAPI:
+    """Test MetAlertsAPI client."""
+
+    @pytest.mark.asyncio
+    async def test_fetch_warnings_lat_lon(self, mock_metalerts_api_response):
+        """Test fetch with latitude/longitude."""
+        api = MetAlertsAPI(latitude=60.39, longitude=5.32, lang="en")
+        
+        with patch("aiohttp.ClientSession") as mock_session_class:
             mock_session = AsyncMock()
             mock_response = AsyncMock()
             mock_response.status = 200
@@ -197,7 +213,12 @@ class TestAvalancheAPI:
             
             mock_session_class.return_value = mock_session
             
+            warnings = await api.fetch_warnings()
+            
             assert len(warnings) == 1
+
+    @pytest.mark.asyncio
+    async def test_extract_times_from_title(self):
             assert warnings[0]["event"] == "rain"
             assert warnings[0]["ActivityLevel"] == "2"
 
