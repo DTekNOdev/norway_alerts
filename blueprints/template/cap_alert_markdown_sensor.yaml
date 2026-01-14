@@ -1,3 +1,4 @@
+#small change
 blueprint:
   name: CAP Alert Markdown Sensor
   description: Creates a sensor that formats CAP (Common Alerting Protocol) alerts as markdown for display in a markdown card
