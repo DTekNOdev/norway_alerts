@@ -52,6 +52,31 @@ _LOGGER = logging.getLogger(__name__)
 SCAN_INTERVAL = timedelta(minutes=30)
 
 
+async def _async_load_template(hass: HomeAssistant) -> str | None:
+    """Load Jinja2 template file asynchronously."""
+    try:
+        template_path = os.path.join(
+            os.path.dirname(__file__), "templates", "formatted_content.j2"
+        )
+        
+        # Use executor to read file without blocking event loop
+        def _read_template():
+            with open(template_path, "r", encoding="utf-8") as f:
+                return f.read()
+        
+        content = await hass.async_add_executor_job(_read_template)
+        _LOGGER.debug("Successfully loaded formatted_content.j2 template")
+        return content
+        
+    except Exception as err:
+        _LOGGER.error(
+            "Failed to load formatted_content.j2 template: %s. Formatted content will not be available.",
+            err,
+            exc_info=True
+        )
+        return None
+
+
 def convert_nve_to_cap(alert: dict, warning_type: str, lang: str) -> dict:
     """Convert NVE warning format to CAP format for unified display.
     
@@ -204,6 +229,9 @@ async def async_setup_entry(
     
     _LOGGER.debug("Setting up sensor for entry %s", entry.entry_id)
     
+    # Load Jinja2 template asynchronously to avoid blocking I/O
+    template_content = await _async_load_template(hass)
+    
     # Get config from entry.options (preferred) or entry.data (fallback)
     config = entry.options if entry.options else entry.data
     
@@ -219,23 +247,23 @@ async def async_setup_entry(
         # County-based configuration (NVE warnings)
         county_name = config.get(CONF_COUNTY_NAME) or entry.data.get(CONF_COUNTY_NAME, "Unknown")
         
-        # Create sensors
+        # Create sensors with pre-loaded template
         entities = [
             # Main sensor with all county alerts
-            NorwayAlertsSensor(coordinator, entry.entry_id, county_name, warning_type, municipality_filter, is_main=True),
+            NorwayAlertsSensor(coordinator, entry.entry_id, county_name, warning_type, municipality_filter, template_content, is_main=True),
         ]
         
         # If municipality filter is set, create an additional "My Area" sensor
         if municipality_filter:
             entities.append(
-                NorwayAlertsSensor(coordinator, entry.entry_id, county_name, warning_type, municipality_filter, is_main=False)
+                NorwayAlertsSensor(coordinator, entry.entry_id, county_name, warning_type, municipality_filter, template_content, is_main=False)
             )
     else:
         # Lat/lon-based configuration (Met.no metalerts)
         # Create a descriptive location name
         location_name = f"({latitude:.2f}, {longitude:.2f})"
         entities = [
-            NorwayAlertsSensor(coordinator, entry.entry_id, location_name, warning_type, "", is_main=True),
+            NorwayAlertsSensor(coordinator, entry.entry_id, location_name, warning_type, "", template_content, is_main=True),
         ]
     
     async_add_entities(entities)
@@ -575,7 +603,7 @@ class NorwayAlertsCoordinator(DataUpdateCoordinator):
 class NorwayAlertsSensor(CoordinatorEntity, SensorEntity):
     """Representation of a Norway Alerts sensor with all alerts in attributes."""
 
-    def __init__(self, coordinator: NorwayAlertsCoordinator, entry_id: str, county_name: str, warning_type: str, municipality_filter: str = "", is_main: bool = True):
+    def __init__(self, coordinator: NorwayAlertsCoordinator, entry_id: str, county_name: str, warning_type: str, municipality_filter: str, template_content: str | None, is_main: bool = True):
         """Initialize the sensor."""
         super().__init__(coordinator)
         
@@ -599,24 +627,21 @@ class NorwayAlertsSensor(CoordinatorEntity, SensorEntity):
         self._municipality_filter = municipality_filter.strip()
         self._is_main = is_main
         
-        # Load and cache the Jinja2 template to avoid blocking I/O in event loop
+        # Store pre-loaded template content (loaded async in async_setup_entry)
+        self._template_content = template_content
         self._formatted_content_template = None
-        self._load_template()
-        
-        # Load and cache the Jinja2 template to avoid blocking I/O in event loop
-        self._formatted_content_template = None
-        self._load_template()
+        if template_content:
+            self._compile_template(template_content)
     
-    def _load_template(self):
-        """Load the Jinja2 template during initialization (before event loop)."""
+    def _compile_template(self, template_string: str):
+        """Compile Jinja2 template from string (no file I/O)."""
         try:
-            template_dir = os.path.join(os.path.dirname(__file__), "templates")
-            env = Environment(loader=FileSystemLoader(template_dir))
-            self._formatted_content_template = env.get_template("formatted_content.j2")
-            _LOGGER.debug("Successfully loaded formatted_content.j2 template")
+            from jinja2 import Template
+            self._formatted_content_template = Template(template_string)
+            _LOGGER.debug("Successfully compiled formatted_content template")
         except Exception as err:
             _LOGGER.error(
-                "Failed to load formatted_content.j2 template: %s. Formatted content will not be available.",
+                "Failed to compile formatted_content template: %s. Formatted content will not be available.",
                 err,
                 exc_info=True
             )
