@@ -19,17 +19,27 @@ from .const import (
 
 _LOGGER = logging.getLogger(__name__)
 
+# Cache version string to avoid blocking I/O on every API call
+_CACHED_VERSION = None
+
 
 def _get_version() -> str:
-    """Get version from manifest.json."""
+    """Get version from manifest.json (cached after first read)."""
+    global _CACHED_VERSION
+    
+    if _CACHED_VERSION is not None:
+        return _CACHED_VERSION
+    
     try:
         manifest_path = os.path.join(os.path.dirname(__file__), "manifest.json")
         with open(manifest_path, "r", encoding="utf-8") as f:
             manifest = json.load(f)
-            return manifest.get("version", "2.0.0")
+            _CACHED_VERSION = manifest.get("version", "2.0.0")
+            return _CACHED_VERSION
     except Exception as e:
         _LOGGER.warning("Could not read version from manifest.json: %s", e)
-        return "2.0.0"
+        _CACHED_VERSION = "2.0.0"
+        return _CACHED_VERSION
 
 
 def _get_user_agent() -> str:
