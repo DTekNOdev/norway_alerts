@@ -607,6 +607,8 @@ class NorwayAlertsSensor(CoordinatorEntity, SensorEntity):
         """Initialize the sensor."""
         super().__init__(coordinator)
         
+        _LOGGER.debug("NorwayAlertsSensor.__init__ called for %s", county_name)
+        
         # Create sensor name based on warning type
         warning_type_label = warning_type.replace("_", " ").title()
         
@@ -630,6 +632,7 @@ class NorwayAlertsSensor(CoordinatorEntity, SensorEntity):
         # Store pre-loaded template content (loaded async in async_setup_entry)
         self._template_content = template_content
         self._formatted_content_template = None
+        self._compact_view_switch_entity_id = None  # Will be set in async_added_to_hass
         if template_content:
             self._compile_template(template_content)
     
@@ -646,6 +649,51 @@ class NorwayAlertsSensor(CoordinatorEntity, SensorEntity):
                 exc_info=True
             )
             self._formatted_content_template = None
+    
+    async def async_added_to_hass(self) -> None:
+        """Register callbacks when entity is added to hass."""
+        await super().async_added_to_hass()
+        
+        _LOGGER.info("Setting up compact view listener for sensor: %s", self.entity_id)
+        
+        # Find the switch entity that's part of the same device
+        from homeassistant.helpers import entity_registry as er
+        from homeassistant.helpers.event import async_track_state_change_event
+        
+        entity_reg = er.async_get(self.hass)
+        
+        # Find all entities in the same device
+        device_id = entity_reg.async_get(self.entity_id).device_id if entity_reg.async_get(self.entity_id) else None
+        
+        if device_id:
+            # Find the switch entity in the same device
+            switch_entity_id = None
+            for entry in entity_reg.entities.values():
+                if entry.device_id == device_id and entry.domain == "switch" and "compact_view" in entry.unique_id:
+                    switch_entity_id = entry.entity_id
+                    break
+            
+            if switch_entity_id:
+                _LOGGER.info("Found compact view switch: %s for sensor: %s", switch_entity_id, self.entity_id)
+                
+                # Store the switch entity ID for use in rendering
+                self._compact_view_switch_entity_id = switch_entity_id
+                
+                async def _switch_state_changed(event):
+                    """Handle switch state changes."""
+                    _LOGGER.info("Compact view switch changed for %s, triggering sensor update", self.entity_id)
+                    self.async_write_ha_state()
+                
+                self.async_on_remove(
+                    async_track_state_change_event(
+                        self.hass, [switch_entity_id], _switch_state_changed
+                    )
+                )
+                _LOGGER.info("✓ Compact view toggle ready for %s -> %s", self.entity_id, switch_entity_id)
+            else:
+                _LOGGER.warning("Could not find compact view switch in device %s", device_id)
+        else:
+            _LOGGER.warning("Could not determine device_id for sensor %s", self.entity_id)
     
     def _add_metalert_attributes(self, alert_dict: dict, alert: dict) -> None:
         """Add MetAlerts-specific attributes to alert dict."""
@@ -829,13 +877,30 @@ class NorwayAlertsSensor(CoordinatorEntity, SensorEntity):
                 
                 enriched_alerts.append(enriched)
             
+            # Check switch state for debugging
+            # Use the stored switch entity_id if available, otherwise construct it
+            switch_entity_id = self._compact_view_switch_entity_id or (
+                f"switch.{self.entity_id.split('.')[1]}_compact_view" if self.entity_id else None
+            )
+            switch_state = self.hass.states.get(switch_entity_id) if switch_entity_id else None
+            switch_state_value = switch_state.state if switch_state else "NOT_FOUND"
+            compact_mode = switch_state_value == 'on'
+            
+            _LOGGER.info(
+                "Rendering formatted_content: sensor=%s, switch=%s, switch_state=%s, compact_mode=%s",
+                self.entity_id, switch_entity_id, switch_state_value, compact_mode
+            )
+            
             # Render using cached template (no blocking I/O)
             return self._formatted_content_template.render(
                 alerts=enriched_alerts,
                 show_icon=show_icon,
                 show_status=show_status,
                 show_map=show_map,
-                now_timestamp=datetime.now().timestamp()
+                now_timestamp=datetime.now().timestamp(),
+                entity_id=self.entity_id,
+                switch_entity_id=switch_entity_id,  # Pass the actual switch entity_id
+                states=self.hass.states.get
             )
             
         except Exception as err:
