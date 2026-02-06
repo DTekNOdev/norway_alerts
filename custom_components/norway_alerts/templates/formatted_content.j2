@@ -1,8 +1,30 @@
-{% if alerts and alerts | length > 0 %}
-{% for alert in alerts %}
-{% set start_ts = alert.get('starttime_timestamp') %}
-{% set end_ts = alert.get('endtime_timestamp') %}
-{% set now_ts = now_timestamp %}
+{%- set switch_id = switch_entity_id if switch_entity_id else ('switch.' ~ entity_id.split('.')[1] ~ '_compact_view') -%}
+{%- set switch_state_obj = states(switch_id) -%}
+{%- set switch_state_value = switch_state_obj.state if switch_state_obj else 'unknown' -%}
+{%- set compact_view = switch_state_value == 'on' -%}
+<!-- DEBUG: entity_id={{ entity_id }}, switch={{ switch_id }}, state={{ switch_state_value }}, compact={{ compact_view }} -->
+{%- if alerts and alerts | length > 0 -%}
+
+{%- if compact_view -%}
+<!-- COMPACT VIEW MODE ACTIVE -->
+{#- Compact view - all alert icons in a single row -#}
+<table role="presentation">
+<tr>
+{%- for alert in alerts %}
+<td width="70" align="center" valign="top">
+{%- if show_icon and alert.get('entity_picture') %}<img src="{{ alert.entity_picture }}" width="64" height="64" title="{{ alert.get('event', 'Alert') }} - {{ alert.get('severity', 'unknown') | capitalize }}">{% endif -%}
+</td>
+{%- endfor %}
+</tr>
+</table>
+
+{%- else -%}
+<!-- FULL VIEW MODE ACTIVE -->
+{#- Full view - all details for each alert -#}
+{%- for alert in alerts -%}
+{%- set start_ts = alert.get('starttime_timestamp') -%}
+{%- set end_ts = alert.get('endtime_timestamp') -%}
+{%- set now_ts = now_timestamp -%}
 
 <table role="presentation">
 <tr height="32">
@@ -14,47 +36,49 @@
 </tr>
 </table>
 
-{% if start_ts and end_ts %}
+{%- if start_ts and end_ts %}
+
 #### Time period
 
 🔵 {{ alert.start_formatted }} - increasing danger
 
 🔵 {{ alert.end_formatted }} - decreasing danger
+{% endif -%}
+{%- if alert.get('description') %}
 
-{% endif %}
-{% if alert.get('description') %}
 #### Description
 
 {{ alert.description }}
+{% endif -%}
+{%- if alert.get('instruction') %}
 
-{% endif %}
-{% if alert.get('instruction') %}
 #### Instructions
 
 {{ alert.instruction }}
+{% endif -%}
+{%- if alert.get('consequences') %}
 
-{% endif %}
-{% if alert.get('consequences') %}
 #### Consequences
 
 {{ alert.consequences }}
 
-{% endif %}
-{% if alert.get('area') %}
+{% endif -%}
+{%- if alert.get('area') %}
 **Area**: {{ alert.area }}
 
-{% endif %}
-{% if alert.get('certainty') or alert.get('severity') or alert.get('level_name') %}
-{% if alert.get('certainty') %}**Certainty**: {{ alert.certainty }}{% endif %}{% if alert.get('certainty') and (alert.get('severity') or alert.get('level_name')) %} | {% endif %}{% if alert.get('severity') or alert.get('level_name') %}**Severity**: {{ alert.get('severity', alert.get('level_name', '')) }}{% endif %}
+{% endif -%}
+{%- if alert.get('certainty') or alert.get('severity') or alert.get('level_name') %}
+{%- if alert.get('certainty') %}**Certainty**: {{ alert.certainty }}{% endif -%}{%- if alert.get('certainty') and (alert.get('severity') or alert.get('level_name')) %} | {% endif -%}{%- if alert.get('severity') or alert.get('level_name') %}**Severity**: {{ alert.get('severity', alert.get('level_name', '')) }}{% endif -%}
 
-{% endif %}
+{% endif -%}
 ---
 
-{% if show_map and alert.get('map_url') %}
+{%- if show_map and alert.get('map_url') %}
 <img src="{{ alert.map_url }}" width="400">
 
-{% endif %}
-{% endfor %}
-{% else %}
+{% endif -%}
+{%- endfor -%}
+{%- endif -%}
+{%- else -%}
 No active alerts
-{% endif %}
+{%- endif -%}

@@ -443,6 +443,76 @@ Unfortunately, Home Assistant's recorder does not support excluding specific att
 
 The integration works with all standard Home Assistant cards and custom cards from HACS.
 
+### Compact View Toggle
+
+The integration automatically creates a **Compact View** switch for each alert sensor. This allows you to toggle between:
+- **Compact view** (switch ON): Shows all alert icons in a single row - perfect for dashboard overviews
+- **Full view** (switch OFF - default): Shows complete alert details including descriptions, instructions, and maps
+
+Both entities are linked in the same device, making them easy to find together.
+
+**Finding Your Entity IDs:**
+1. Go to Settings → Devices & Services → Norway Alerts
+2. Click on your location/region device
+3. Note both entity IDs (the sensor and the switch)
+
+The sensor automatically detects if the switch is renamed and re-links without requiring a restart.
+
+**Note:** Standard markdown cards do not support tap actions. To toggle the view, you'll need either a separate toggle control (shown below) or a custom card from HACS that adds tap action support.
+
+#### Example: Entities Card with Toggle (Recommended)
+
+Most compact approach using only standard cards:
+
+```yaml
+type: vertical-stack
+cards:
+  - type: entities
+    entities:
+      - entity: switch.vestland_weather_alerts_compact_view  # Your switch entity ID
+        name: Compact View
+  - type: markdown
+    content: >
+      {{ state_attr('sensor.norway_alerts_metalerts_vestland', 'formatted_content') }}
+```
+
+#### Example: Button Toggle
+
+Alternative with a button control:
+
+```yaml
+type: vertical-stack
+cards:
+  - type: button
+    entity: switch.vestland_weather_alerts_compact_view
+    name: Toggle Alert View
+    icon: mdi:view-compact
+    tap_action:
+      action: toggle
+  - type: markdown
+    content: >
+      {{ state_attr('sensor.norway_alerts_metalerts_vestland', 'formatted_content') }}
+```
+
+#### Example: Custom Card with Tap Action (Advanced)
+
+For tap-to-toggle on the markdown card itself, install the **Actions Card** from HACS:
+
+**Requirements:** Install [actions-card](https://github.com/nutteloost/actions-card) from HACS
+
+```yaml
+type: custom:actions-card
+entity: switch.vestland_weather_alerts_compact_view  # Your switch entity ID
+tap_action:
+  action: toggle
+card:
+  type: markdown
+  content: >
+    {{ state_attr('sensor.norway_alerts_metalerts_vestland', 'formatted_content') }}
+```
+
+This wraps the markdown card with tap action support, allowing you to tap anywhere to toggle between compact and full views.
+
 ---
 
 ## Usage Examples
